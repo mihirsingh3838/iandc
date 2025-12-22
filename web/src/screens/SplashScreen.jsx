@@ -31,12 +31,13 @@ const SplashScreen = () => {
       >
         <Box
           component="img"
-          src="/logo.png"
-          alt="Logo"
+          src="https://i.ibb.co/qFCz1jSY/iandc.jpg"
+          alt="I&C Logo"
           sx={{
             width: '70%',
             maxWidth: '400px',
             height: 'auto',
+            objectFit: 'contain',
           }}
         />
         <Box

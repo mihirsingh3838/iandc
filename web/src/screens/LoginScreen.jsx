@@ -64,6 +64,20 @@ const LoginScreen = () => {
           }}
         >
           <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Box
+              component="img"
+              src="https://i.ibb.co/qFCz1jSY/iandc.jpg"
+              alt="I&C Logo"
+              sx={{
+                width: '60%',
+                maxWidth: '300px',
+                height: 'auto',
+                objectFit: 'contain',
+                mb: 3,
+                mx: 'auto',
+                display: 'block',
+              }}
+            />
             <Typography 
               variant="h4" 
               component="h1" 

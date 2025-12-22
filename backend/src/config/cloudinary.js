@@ -9,7 +9,9 @@ console.log('Initializing Cloudinary with:', {
 
 // Validate required environment variables
 if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-  console.error('Missing required Cloudinary configuration. Please check your .env file.');
+  console.error('Missing required Cloudinary configuration.');
+  console.error('Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
+  console.error('In production (Render/Heroku), set these in your platform\'s environment variables dashboard.');
   process.exit(1);
 }
 

@@ -7,11 +7,18 @@ const auth = require('./middleware/auth');
 const errorHandler = require('./middleware/errorHandler');
 const requestLogger = require('./middleware/requestLogger');
 
-// Configure dotenv with specific path and debug
-const result = dotenv.config({ path: path.join(__dirname, '..', '.env') });
+// Configure dotenv - only load .env file if it exists (for local development)
+// In production (Render, Heroku, etc.), environment variables are set by the platform
+const envPath = path.join(__dirname, '..', '.env');
+const result = dotenv.config({ path: envPath });
 if (result.error) {
-  console.error('Error loading .env file:', result.error);
-  process.exit(1);
+  // Only log warning in development, not exit - production uses system env vars
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('Warning: .env file not found. Using system environment variables.');
+    console.warn('This is normal in production environments like Render.');
+  }
+} else {
+  console.log('Loaded .env file for local development');
 }
 
 // Debug environment variables (without exposing sensitive data)
@@ -37,7 +44,15 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 
 // Middleware
-app.use(cors());
+// CORS configuration - allow frontend origin in production
+const corsOptions = {
+  origin: process.env.FRONTEND_URL 
+    ? process.env.FRONTEND_URL.split(',').map(url => url.trim())
+    : '*', // Allow all origins if FRONTEND_URL not set (useful for development)
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(requestLogger);

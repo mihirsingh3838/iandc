@@ -129,10 +129,26 @@ const getDashboardInsights = async (req, res) => {
   }
 };
 
+// Get all attendance records
+const getAllAttendance = async (req, res) => {
+  try {
+    const attendance = await Attendance.find()
+      .populate('userId', 'name username')
+      .sort({ timestamp: -1 })
+      .limit(1000); // Limit to recent 1000 records
+
+    res.json(attendance);
+  } catch (error) {
+    console.error('Get all attendance error:', error);
+    res.status(500).json({ message: 'Error fetching attendance', error: error.message });
+  }
+};
+
 module.exports = {
   getAllSubmissions,
   getSubmissionsByFacility,
   reviewSubmission,
-  getDashboardInsights
+  getDashboardInsights,
+  getAllAttendance
 };
 

@@ -55,24 +55,63 @@ const ICSubmissionScreen = () => {
   const [loading, setLoading] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
 
+  // LocalStorage key for form data
+  const getStorageKey = (id) => `ic_submission_${id}`;
+
+  // Load form data from localStorage on mount
   useEffect(() => {
     if (!facilityId) {
       toast.error('Facility not selected. Please select a facility first.');
       navigate('/facility-selection');
       return;
     }
+    
+    // First try to load from localStorage (instant)
+    const storageKey = getStorageKey(facilityId);
+    const storedData = localStorage.getItem(storageKey);
+    if (storedData) {
+      try {
+        const parsed = JSON.parse(storedData);
+        setFormData(parsed);
+      } catch (error) {
+        console.error('Error parsing stored form data:', error);
+      }
+    }
+    
+    // Then load from server draft (will override if exists)
     loadDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facilityId]);
+
+  // Auto-save to localStorage whenever formData changes (debounced)
+  useEffect(() => {
+    if (!facilityId) return;
+    
+    const timeoutId = setTimeout(() => {
+      try {
+        const storageKey = getStorageKey(facilityId);
+        localStorage.setItem(storageKey, JSON.stringify(formData));
+      } catch (error) {
+        console.error('Error saving form data to localStorage:', error);
+      }
+    }, 500); // Debounce 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [formData, facilityId]);
 
   const loadDraft = async () => {
     try {
       setLoading(true);
       const draft = await icSubmissionService.getDraft(facilityId, user?.token);
       if (draft) {
-        setFormData({
+        const loadedData = {
           tower: draft.towerEnd || {},
           customer: draft.customerEnd || {}
-        });
+        };
+        setFormData(loadedData);
+        // Also save to localStorage
+        const storageKey = getStorageKey(facilityId);
+        localStorage.setItem(storageKey, JSON.stringify(loadedData));
       }
     } catch (error) {
       console.error('Error loading draft:', error);
@@ -132,6 +171,9 @@ const ICSubmissionScreen = () => {
         formData.tower,
         user?.token
       );
+      // Clear localStorage after successful submission
+      const storageKey = getStorageKey(facilityId);
+      localStorage.removeItem(storageKey);
       toast.success('Submission successful');
       navigate('/home');
     } catch (error) {

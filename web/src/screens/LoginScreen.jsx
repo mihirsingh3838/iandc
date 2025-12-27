@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -9,6 +9,7 @@ import {
   Typography,
   InputAdornment,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import { Visibility, VisibilityOff, Person, Lock } from '@mui/icons-material';
 import { toast } from 'react-toastify';
@@ -16,7 +17,36 @@ import { useAuth } from '../context/AuthContext';
 
 const LoginScreen = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
+  
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      // User is already logged in, redirect to appropriate page
+      if (user.role === 'admin' || user.username === 'admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/facility-selection', { replace: true });
+      }
+    }
+  }, [user, authLoading, navigate]);
+  
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        }}
+      >
+        <CircularProgress size={60} sx={{ color: 'white' }} />
+      </Box>
+    );
+  }
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

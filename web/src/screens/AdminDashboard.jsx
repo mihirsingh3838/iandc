@@ -27,11 +27,13 @@ import {
   Tabs,
   Tab,
   CircularProgress,
+  Avatar,
 } from '@mui/material';
 import { Logout, CheckCircle, Cancel, Visibility, Refresh } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import apiClient from '../utils/axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import facilitiesData from '../data/facilities.json';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -39,10 +41,24 @@ const AdminDashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [groupedSubmissions, setGroupedSubmissions] = useState({});
   const [insights, setInsights] = useState(null);
+  const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [reviewDialog, setReviewDialog] = useState({ open: false, submission: null });
   const [reviewReason, setReviewReason] = useState('');
+  
+  // Create facility mapping
+  const facilityMap = React.useMemo(() => {
+    const map = {};
+    facilitiesData.forEach(facility => {
+      map[facility.facility_code] = facility.facility_name;
+    });
+    return map;
+  }, []);
+  
+  const getFacilityName = (facilityId) => {
+    return facilityMap[facilityId] || facilityId;
+  };
 
   useEffect(() => {
     fetchData();
@@ -51,14 +67,16 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [submissionsRes, groupedRes, insightsRes] = await Promise.all([
+      const [submissionsRes, groupedRes, insightsRes, attendanceRes] = await Promise.all([
         apiClient.get('/api/admin/submissions'),
         apiClient.get('/api/admin/submissions/by-facility'),
         apiClient.get('/api/admin/dashboard/insights'),
+        apiClient.get('/api/admin/attendance'),
       ]);
       setSubmissions(submissionsRes.data);
       setGroupedSubmissions(groupedRes.data);
       setInsights(insightsRes.data);
+      setAttendance(attendanceRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
       if (error.response?.status === 403) {
@@ -109,7 +127,7 @@ const AdminDashboard = () => {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Facility ID</TableCell>
+            <TableCell>Site Name</TableCell>
             <TableCell>Submitted By</TableCell>
             <TableCell>Submitted At</TableCell>
             <TableCell>Status</TableCell>
@@ -120,7 +138,7 @@ const AdminDashboard = () => {
         <TableBody>
           {submissions.map((submission) => (
             <TableRow key={submission._id}>
-              <TableCell>{submission.facilityId}</TableCell>
+              <TableCell>{getFacilityName(submission.facilityId)}</TableCell>
               <TableCell>
                 {submission.userId?.name || submission.userId?.username || 'Unknown'}
               </TableCell>
@@ -203,7 +221,7 @@ const AdminDashboard = () => {
       {Object.entries(groupedSubmissions).map(([facilityId, facilitySubmissions]) => (
         <Paper key={facilityId} sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Facility: {facilityId} ({facilitySubmissions.length} submissions)
+            Site: {getFacilityName(facilityId)} ({facilitySubmissions.length} submissions)
           </Typography>
           <TableContainer>
             <Table size="small">
@@ -392,11 +410,68 @@ const AdminDashboard = () => {
               >
                 <Tab label="All Submissions" />
                 <Tab label="By Facility" />
+                <Tab label="Attendance" />
               </Tabs>
             </Paper>
 
             {activeTab === 0 && renderAllSubmissions()}
             {activeTab === 1 && renderByFacility()}
+            {activeTab === 2 && (
+              <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>User</TableCell>
+                      <TableCell>Type</TableCell>
+                      <TableCell>Location</TableCell>
+                      <TableCell>Site</TableCell>
+                      <TableCell>Timestamp</TableCell>
+                      <TableCell>Selfie</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {attendance.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          <Typography color="text.secondary">No attendance records found</Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      attendance.map((record) => (
+                        <TableRow key={record._id}>
+                          <TableCell>
+                            {record.userId?.name || record.name || record.username || 'Unknown'}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={record.attendanceType}
+                              color={record.attendanceType === 'Check In' ? 'success' : 'info'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>{record.location?.name || 'N/A'}</TableCell>
+                          <TableCell>
+                            {record.facilityDetails?.facility_name || record.facilityDetails?.facility_code || 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {record.timestamp
+                              ? new Date(record.timestamp).toLocaleString()
+                              : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <Avatar
+                              src={record.selfieUrl}
+                              sx={{ width: 56, height: 56, cursor: 'pointer' }}
+                              onClick={() => window.open(record.selfieUrl, '_blank')}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </>
         )}
       </Container>

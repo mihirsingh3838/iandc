@@ -22,13 +22,26 @@ export const AuthProvider = ({ children }) => {
       const storedUser = localStorage.getItem('userData');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        const isValid = await validateToken(parsedUser.token);
-        if (!isValid) {
-          localStorage.removeItem('userData');
-          localStorage.removeItem('facilityDetails');
-          setUser(null);
-        }
-        // User is set in validateToken if valid
+        // Set user immediately from localStorage (optimistic)
+        // This ensures user is available immediately when opening new tabs
+        setUser(parsedUser);
+        
+        // Then validate token in background (non-blocking)
+        // Only clear user if token is actually invalid (401), not on network errors
+        validateToken(parsedUser.token).catch((validationError) => {
+          // Only clear user if it's a 401 (unauthorized) error
+          // Network errors, timeouts, etc. should not log the user out
+          if (validationError?.response?.status === 401) {
+            console.error('Token is invalid (401), logging out:', validationError);
+            localStorage.removeItem('userData');
+            localStorage.removeItem('facilityDetails');
+            setUser(null);
+          } else {
+            // For other errors (network, timeout, etc.), keep user logged in
+            // They can still use the app, and validation will retry on next request
+            console.warn('Token validation error (non-critical), keeping user logged in:', validationError?.message);
+          }
+        });
       }
     } catch (error) {
       console.error('Error loading stored user:', error);
@@ -41,7 +54,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const validateToken = async (token) => {
-    if (!token) return false;
+    if (!token) {
+      throw new Error('No token provided');
+    }
     try {
       const response = await apiClient.get('/api/auth/validate');
       if (response.status === 200) {
@@ -60,10 +75,10 @@ export const AuthProvider = ({ children }) => {
         }
         return true;
       }
-      return false;
+      throw new Error('Invalid response status');
     } catch (error) {
-      console.error('Token validation error:', error);
-      return false;
+      // Re-throw error so caller can check status code
+      throw error;
     }
   };
 

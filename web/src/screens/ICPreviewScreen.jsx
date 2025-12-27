@@ -11,33 +11,54 @@ import {
   AppBar,
   Toolbar,
   IconButton,
+  Dialog,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { ArrowBack, Home } from '@mui/icons-material';
+import { ArrowBack, Home, Close, ZoomIn } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import icSubmissionService from '../services/icSubmissionService';
 import apiClient from '../utils/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 
-const ImagePreview = ({ images, size = 'small' }) => (
-  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1.5 }}>
-    {images?.map((image, index) => (
-      <Box
-        key={index}
-        component="img"
-        src={typeof image === 'string' ? image : image.url || image}
-        alt={`Preview ${index + 1}`}
-        sx={{
-          width: size === 'small' ? { xs: 50, sm: 60 } : { xs: 80, sm: 100 },
-          height: size === 'small' ? { xs: 50, sm: 60 } : { xs: 80, sm: 100 },
-          borderRadius: 1.5,
-          objectFit: 'cover',
-          border: '2px solid',
-          borderColor: 'divider',
-        }}
-      />
-    ))}
-  </Box>
-);
+const ImagePreview = ({ images, size = 'small', onImageClick, isAdmin = false }) => {
+  const handleClick = (image) => {
+    if (isAdmin && onImageClick) {
+      onImageClick(image);
+    }
+  };
+
+  return (
+    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1.5 }}>
+      {images?.map((image, index) => {
+        const imageUrl = typeof image === 'string' ? image : image.url || image;
+        return (
+          <Box
+            key={index}
+            component="img"
+            src={imageUrl}
+            alt={`Preview ${index + 1}`}
+            onClick={() => handleClick(imageUrl)}
+            sx={{
+              width: size === 'small' ? { xs: 50, sm: 60 } : { xs: 80, sm: 100 },
+              height: size === 'small' ? { xs: 50, sm: 60 } : { xs: 80, sm: 100 },
+              borderRadius: 1.5,
+              objectFit: 'cover',
+              border: '2px solid',
+              borderColor: 'divider',
+              cursor: isAdmin ? 'pointer' : 'default',
+              transition: 'transform 0.2s',
+              '&:hover': isAdmin ? {
+                transform: 'scale(1.05)',
+                boxShadow: 3,
+              } : {},
+            }}
+          />
+        );
+      })}
+    </Box>
+  );
+};
 
 const PreviewSection = ({ title, children }) => (
   <Paper 
@@ -65,6 +86,9 @@ const ICPreviewScreen = () => {
   const [loading, setLoading] = useState(false);
   const [submissionData, setSubmissionData] = useState(null);
   const [viewMode, setViewMode] = useState(false);
+  const [imageDialog, setImageDialog] = useState({ open: false, imageUrl: null });
+  
+  const isAdmin = user?.role === 'admin' || user?.username === 'admin';
 
   useEffect(() => {
     if (submissionId) {
@@ -100,6 +124,9 @@ const ICPreviewScreen = () => {
         submissionData.towerEnd || towerEnd,
         user?.token
       );
+      // Clear localStorage after successful submission
+      const storageKey = `ic_submission_${submissionData.facilityId || facilityId}`;
+      localStorage.removeItem(storageKey);
       toast.success('Submission successful');
       navigate('/home');
     } catch (error) {
@@ -205,9 +232,17 @@ const ICPreviewScreen = () => {
           <Typography>Type: {displayCustomerEnd.router.routerType}</Typography>
           <Typography>Serial Number: {displayCustomerEnd.router.serialNumber}</Typography>
           <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Router Images:</Typography>
-          <ImagePreview images={displayCustomerEnd.router.images?.routerImages} />
+          <ImagePreview 
+            images={displayCustomerEnd.router.images?.routerImages} 
+            isAdmin={isAdmin}
+            onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+          />
           <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Cable Connectivity Images:</Typography>
-          <ImagePreview images={displayCustomerEnd.router.images?.cableConnectivityImages} />
+          <ImagePreview 
+            images={displayCustomerEnd.router.images?.cableConnectivityImages}
+            isAdmin={isAdmin}
+            onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+          />
         </PreviewSection>
       )}
 
@@ -219,7 +254,11 @@ const ICPreviewScreen = () => {
             LAN Cable Reading: {displayCustomerEnd.radio.lanCableReading?.start} - {displayCustomerEnd.radio.lanCableReading?.end}
           </Typography>
           <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Images:</Typography>
-          <ImagePreview images={displayCustomerEnd.radio.images} />
+          <ImagePreview 
+            images={displayCustomerEnd.radio.images}
+            isAdmin={isAdmin}
+            onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+          />
         </PreviewSection>
       )}
 
@@ -242,7 +281,11 @@ const ICPreviewScreen = () => {
               <Typography>Floor: {rack.floor}</Typography>
               <Typography>Location: {rack.location}</Typography>
               <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Images:</Typography>
-              <ImagePreview images={rack.images} />
+              <ImagePreview 
+                images={rack.images}
+                isAdmin={isAdmin}
+                onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+              />
             </Paper>
           ))}
         </PreviewSection>
@@ -263,7 +306,11 @@ const ICPreviewScreen = () => {
                 LAN Cable Reading: {ap.lanCableReading?.start} - {ap.lanCableReading?.end}
               </Typography>
               <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Images:</Typography>
-              <ImagePreview images={ap.images} />
+              <ImagePreview 
+                images={ap.images}
+                isAdmin={isAdmin}
+                onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+              />
             </Paper>
           ))}
         </PreviewSection>
@@ -282,7 +329,11 @@ const ICPreviewScreen = () => {
               <Typography>IT Rack: {poe.itRackNumber}</Typography>
               <Typography>Location: {poe.location}</Typography>
               <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Images:</Typography>
-              <ImagePreview images={poe.images} />
+              <ImagePreview 
+                images={poe.images}
+                isAdmin={isAdmin}
+                onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+              />
             </Paper>
           ))}
         </PreviewSection>
@@ -301,7 +352,11 @@ const ICPreviewScreen = () => {
               <Typography>IT Rack: {desktop.itRackNumber}</Typography>
               <Typography>Location: {desktop.location}</Typography>
               <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Images:</Typography>
-              <ImagePreview images={desktop.images} />
+              <ImagePreview 
+                images={desktop.images}
+                isAdmin={isAdmin}
+                onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+              />
             </Paper>
           ))}
         </PreviewSection>
@@ -316,9 +371,17 @@ const ICPreviewScreen = () => {
           <Typography>Type: {displayTowerEnd.router.routerType}</Typography>
           <Typography>Serial Number: {displayTowerEnd.router.serialNumber}</Typography>
           <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Router Images:</Typography>
-          <ImagePreview images={displayTowerEnd.router.images?.routerImages} />
+          <ImagePreview 
+            images={displayTowerEnd.router.images?.routerImages}
+            isAdmin={isAdmin}
+            onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+          />
           <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Cable Connectivity Images:</Typography>
-          <ImagePreview images={displayTowerEnd.router.images?.cableConnectivityImages} />
+          <ImagePreview 
+            images={displayTowerEnd.router.images?.cableConnectivityImages}
+            isAdmin={isAdmin}
+            onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+          />
         </PreviewSection>
       )}
 
@@ -330,7 +393,11 @@ const ICPreviewScreen = () => {
             LAN Cable Reading: {displayTowerEnd.radio.lanCableReading?.start} - {displayTowerEnd.radio.lanCableReading?.end}
           </Typography>
           <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Images:</Typography>
-          <ImagePreview images={displayTowerEnd.radio.images} />
+          <ImagePreview 
+            images={displayTowerEnd.radio.images}
+            isAdmin={isAdmin}
+            onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
+          />
         </PreviewSection>
       )}
 
@@ -396,6 +463,68 @@ const ICPreviewScreen = () => {
           </Box>
         )}
       </Container>
+
+      {/* Full-screen image dialog for admin */}
+      <Dialog
+        open={imageDialog.open}
+        onClose={() => setImageDialog({ open: false, imageUrl: null })}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            boxShadow: 'none',
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh' }}>
+          <IconButton
+            onClick={() => setImageDialog({ open: false, imageUrl: null })}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              color: 'white',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              },
+            }}
+          >
+            <Close />
+          </IconButton>
+          {imageDialog.imageUrl && (
+            <Box
+              component="img"
+              src={imageDialog.imageUrl}
+              alt="Full view"
+              sx={{
+                maxWidth: '100%',
+                maxHeight: '90vh',
+                objectFit: 'contain',
+              }}
+            />
+          )}
+        </DialogContent>
+        <DialogActions sx={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', p: 1 }}>
+          <Button
+            onClick={() => setImageDialog({ open: false, imageUrl: null })}
+            sx={{ color: 'white' }}
+            startIcon={<Close />}
+          >
+            Close
+          </Button>
+          {imageDialog.imageUrl && (
+            <Button
+              onClick={() => window.open(imageDialog.imageUrl, '_blank')}
+              sx={{ color: 'white' }}
+              startIcon={<ZoomIn />}
+            >
+              Open in New Tab
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

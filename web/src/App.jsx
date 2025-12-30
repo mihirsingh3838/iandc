@@ -11,6 +11,7 @@ import ICSubmissionScreen from './screens/ICSubmissionScreen';
 import ICPreviewScreen from './screens/ICPreviewScreen';
 import AdminDashboard from './screens/AdminDashboard';
 import UserRecordsScreen from './screens/UserRecordsScreen';
+import NotFoundScreen from './screens/NotFoundScreen';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -157,6 +158,8 @@ function App() {
           </UserRoute>
         }
       />
+      {/* Catch-all route for 404 - must be last */}
+      <Route path="*" element={<NotFoundScreen />} />
     </Routes>
   );
 }

@@ -113,7 +113,7 @@ const TowerEndForm = ({ data, onUpdate, showError }) => {
         <ToggleButtonGroup
           value={data?.router?.routerType || ''}
           exclusive
-          onChange={(e, value) => value && updateRouterData({ routerType: value })}
+          onChange={(e, value) => value && updateRouterData({ routerType: value, routerModel: '' })}
           sx={{ 
             mb: 2,
             flexWrap: 'wrap',
@@ -122,14 +122,87 @@ const TowerEndForm = ({ data, onUpdate, showError }) => {
               flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
               minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
               textTransform: 'none',
+              '&.Mui-selected': {
+                backgroundColor: '#667eea',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: '#5568d3',
+                },
+              },
             },
           }}
         >
-          <ToggleButton value="HEX">HEX</ToggleButton>
-          <ToggleButton value="HEX-S">HEX-S</ToggleButton>
-          <ToggleButton value="HAP">HAP</ToggleButton>
+          <ToggleButton value="Mikrotik">Mikrotik</ToggleButton>
           <ToggleButton value="CCR">CCR</ToggleButton>
         </ToggleButtonGroup>
+
+        {data?.router?.routerType === 'Mikrotik' && (
+          <>
+            <Typography variant="body2" sx={{ mb: 1.5, mt: 2, fontWeight: 500 }}>
+              Mikrotik Model
+            </Typography>
+            <ToggleButtonGroup
+              value={data?.router?.routerModel || ''}
+              exclusive
+              onChange={(e, value) => value && updateRouterData({ routerModel: value })}
+              sx={{ 
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1,
+                '& .MuiToggleButton-root': {
+                  flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
+                  minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
+                  textTransform: 'none',
+                  '&.Mui-selected': {
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#5568d3',
+                    },
+                  },
+                },
+              }}
+            >
+              <ToggleButton value="L009">L009</ToggleButton>
+              <ToggleButton value="hexS 760iGS">hexS 760iGS</ToggleButton>
+              <ToggleButton value="hex 750Gr3">hex 750Gr3</ToggleButton>
+            </ToggleButtonGroup>
+          </>
+        )}
+
+        {data?.router?.routerType === 'CCR' && (
+          <>
+            <Typography variant="body2" sx={{ mb: 1.5, mt: 2, fontWeight: 500 }}>
+              CCR Model
+            </Typography>
+            <ToggleButtonGroup
+              value={data?.router?.routerModel || ''}
+              exclusive
+              onChange={(e, value) => value && updateRouterData({ routerModel: value })}
+              sx={{ 
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1,
+                '& .MuiToggleButton-root': {
+                  flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
+                  minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
+                  textTransform: 'none',
+                  '&.Mui-selected': {
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#5568d3',
+                    },
+                  },
+                },
+              }}
+            >
+              <ToggleButton value="2004-1G-12S+2XS">2004-1G-12S+2XS</ToggleButton>
+              <ToggleButton value="2004-16G-2S+">2004-16G-2S+</ToggleButton>
+              <ToggleButton value="2116-12G-4S+">2116-12G-4S+</ToggleButton>
+            </ToggleButtonGroup>
+          </>
+        )}
 
         <TextField
           fullWidth
@@ -264,7 +337,7 @@ const TowerEndForm = ({ data, onUpdate, showError }) => {
         <ToggleButtonGroup
           value={data?.radio?.radioType || ''}
           exclusive
-          onChange={(e, value) => value && updateRadioData({ radioType: value })}
+          onChange={(e, value) => value && updateRadioData({ radioType: value, radioModel: '' })}
           sx={{ 
             mb: 2,
             flexWrap: 'wrap',
@@ -273,13 +346,56 @@ const TowerEndForm = ({ data, onUpdate, showError }) => {
               flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
               minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
               textTransform: 'none',
+              '&.Mui-selected': {
+                backgroundColor: '#667eea',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: '#5568d3',
+                },
+              },
             },
           }}
         >
           <ToggleButton value="LHG5">LHG5</ToggleButton>
           <ToggleButton value="DIISC LITE">DIISC LITE</ToggleButton>
-          <ToggleButton value="MIMOSA">MIMOSA</ToggleButton>
+          <ToggleButton value="Mimosa">Mimosa</ToggleButton>
         </ToggleButtonGroup>
+
+        {data?.radio?.radioType === 'Mimosa' && (
+          <>
+            <Typography variant="body2" sx={{ mb: 1.5, mt: 2, fontWeight: 500 }}>
+              Mimosa Model
+            </Typography>
+            <ToggleButtonGroup
+              value={data?.radio?.radioModel || ''}
+              exclusive
+              onChange={(e, value) => value && updateRadioData({ radioModel: value })}
+              sx={{ 
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1,
+                '& .MuiToggleButton-root': {
+                  flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
+                  minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
+                  textTransform: 'none',
+                  '&.Mui-selected': {
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#5568d3',
+                    },
+                  },
+                },
+              }}
+            >
+              <ToggleButton value="C6X">C6X</ToggleButton>
+              <ToggleButton value="C5X with Mimosa Antenna">C5X with Mimosa Antenna</ToggleButton>
+              <ToggleButton value="C5X with Fibergate Antenna">C5X with Fibergate Antenna</ToggleButton>
+              <ToggleButton value="B6X with Mimosa Antenna">B6X with Mimosa Antenna</ToggleButton>
+              <ToggleButton value="Ethernet surge protector">Ethernet surge protector</ToggleButton>
+            </ToggleButtonGroup>
+          </>
+        )}
 
         <TextField
           fullWidth

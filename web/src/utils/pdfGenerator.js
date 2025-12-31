@@ -104,6 +104,10 @@ export const generatePDFReport = async (submissionData, facilityName, submitterN
       doc.setFont(undefined, 'normal');
       doc.text(`Type: ${customerEnd.router.routerType || 'N/A'}`, margin + 5, yPos);
       yPos += lineHeight;
+      if (customerEnd.router.routerModel) {
+        doc.text(`Model: ${customerEnd.router.routerModel}`, margin + 5, yPos);
+        yPos += lineHeight;
+      }
       doc.text(`Serial Number: ${customerEnd.router.serialNumber || 'N/A'}`, margin + 5, yPos);
       yPos += lineHeight + 3;
 
@@ -149,6 +153,10 @@ export const generatePDFReport = async (submissionData, facilityName, submitterN
       doc.setFont(undefined, 'normal');
       doc.text(`Type: ${customerEnd.radio.radioType || 'N/A'}`, margin + 5, yPos);
       yPos += lineHeight;
+      if (customerEnd.radio.radioModel) {
+        doc.text(`Model: ${customerEnd.radio.radioModel}`, margin + 5, yPos);
+        yPos += lineHeight;
+      }
       doc.text(`Serial Number: ${customerEnd.radio.serialNumber || 'N/A'}`, margin + 5, yPos);
       yPos += lineHeight;
       if (customerEnd.radio.lanCableReading) {
@@ -312,48 +320,17 @@ export const generatePDFReport = async (submissionData, facilityName, submitterN
       }
     }
 
-    // Desktop Switches
-    if (customerEnd.desktopSwitches?.length > 0) {
-      checkPageBreak(30);
+    // Site Video
+    if (customerEnd.siteVideo) {
+      checkPageBreak(20);
       doc.setFontSize(12);
       doc.setFont(undefined, 'bold');
-      doc.text('Desktop Switch Details', margin, yPos);
+      doc.text('Site Video', margin, yPos);
       yPos += lineHeight;
       doc.setFontSize(10);
       doc.setFont(undefined, 'normal');
-
-      for (const desktop of customerEnd.desktopSwitches) {
-        checkPageBreak(50);
-        doc.setFont(undefined, 'bold');
-        doc.text(`Desktop Switch ${desktop.desktopNumber}:`, margin + 5, yPos);
-        yPos += lineHeight;
-        doc.setFont(undefined, 'normal');
-        doc.text(`Make: ${desktop.make || 'N/A'}`, margin + 10, yPos);
-        yPos += lineHeight;
-        doc.text(`Model: ${desktop.model || 'N/A'}`, margin + 10, yPos);
-        yPos += lineHeight;
-        doc.text(`Serial Number: ${desktop.serialNumber || 'N/A'}`, margin + 10, yPos);
-        yPos += lineHeight;
-        doc.text(`IT Rack: ${desktop.itRackNumber || 'N/A'}`, margin + 10, yPos);
-        yPos += lineHeight;
-        doc.text(`Location: ${desktop.location || 'N/A'}`, margin + 10, yPos);
-        yPos += lineHeight + 3;
-
-        // Desktop Switch Images
-        if (desktop.images?.length > 0) {
-          doc.setFont(undefined, 'bold');
-          doc.text('Images:', margin + 10, yPos);
-          yPos += lineHeight;
-          doc.setFont(undefined, 'normal');
-          
-          for (const imageUrl of desktop.images) {
-            checkPageBreak(60);
-            const imgHeight = await addImageToPDF(doc, imageUrl, margin + 10, yPos, maxWidth - 15, 50);
-            yPos += imgHeight + 3;
-          }
-        }
-        yPos += sectionSpacing;
-      }
+      doc.text('Video URL: ' + customerEnd.siteVideo, margin + 5, yPos);
+      yPos += lineHeight + sectionSpacing;
     }
   }
 
@@ -377,6 +354,10 @@ export const generatePDFReport = async (submissionData, facilityName, submitterN
       doc.setFont(undefined, 'normal');
       doc.text(`Type: ${towerEnd.router.routerType || 'N/A'}`, margin + 5, yPos);
       yPos += lineHeight;
+      if (towerEnd.router.routerModel) {
+        doc.text(`Model: ${towerEnd.router.routerModel}`, margin + 5, yPos);
+        yPos += lineHeight;
+      }
       doc.text(`Serial Number: ${towerEnd.router.serialNumber || 'N/A'}`, margin + 5, yPos);
       yPos += lineHeight + 3;
 
@@ -422,6 +403,10 @@ export const generatePDFReport = async (submissionData, facilityName, submitterN
       doc.setFont(undefined, 'normal');
       doc.text(`Type: ${towerEnd.radio.radioType || 'N/A'}`, margin + 5, yPos);
       yPos += lineHeight;
+      if (towerEnd.radio.radioModel) {
+        doc.text(`Model: ${towerEnd.radio.radioModel}`, margin + 5, yPos);
+        yPos += lineHeight;
+      }
       doc.text(`Serial Number: ${towerEnd.radio.serialNumber || 'N/A'}`, margin + 5, yPos);
       yPos += lineHeight;
       if (towerEnd.radio.lanCableReading) {

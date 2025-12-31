@@ -321,6 +321,9 @@ const ICPreviewScreen = () => {
       {displayCustomerEnd?.router && (
         <PreviewSection title="Router Details">
           <Typography>Type: {displayCustomerEnd.router.routerType}</Typography>
+          {displayCustomerEnd.router.routerModel && (
+            <Typography>Model: {displayCustomerEnd.router.routerModel}</Typography>
+          )}
           <Typography>Serial Number: {displayCustomerEnd.router.serialNumber}</Typography>
           <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Router Images:</Typography>
           <ImagePreview 
@@ -340,6 +343,9 @@ const ICPreviewScreen = () => {
       {displayCustomerEnd?.radio && (
         <PreviewSection title="Radio Details">
           <Typography>Type: {displayCustomerEnd.radio.radioType}</Typography>
+          {displayCustomerEnd.radio.radioModel && (
+            <Typography>Model: {displayCustomerEnd.radio.radioModel}</Typography>
+          )}
           <Typography>Serial Number: {displayCustomerEnd.radio.serialNumber}</Typography>
           <Typography>
             LAN Cable Reading: {displayCustomerEnd.radio.lanCableReading?.start} - {displayCustomerEnd.radio.lanCableReading?.end}
@@ -430,26 +436,20 @@ const ICPreviewScreen = () => {
         </PreviewSection>
       )}
 
-      {displayCustomerEnd?.desktopSwitches && displayCustomerEnd.desktopSwitches.length > 0 && (
-        <PreviewSection title="Desktop Switch Details">
-          {displayCustomerEnd.desktopSwitches.map((desktop, index) => (
-            <Paper key={index} sx={{ p: 2, mb: 1, backgroundColor: '#f5f5f5' }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                Desktop Switch {desktop.desktopNumber}
-              </Typography>
-              <Typography>Make: {desktop.make}</Typography>
-              <Typography>Model: {desktop.model}</Typography>
-              <Typography>Serial Number: {desktop.serialNumber}</Typography>
-              <Typography>IT Rack: {desktop.itRackNumber}</Typography>
-              <Typography>Location: {desktop.location}</Typography>
-              <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Images:</Typography>
-              <ImagePreview 
-                images={desktop.images}
-                isAdmin={isAdmin}
-                onImageClick={(url) => setImageDialog({ open: true, imageUrl: url })}
-              />
-            </Paper>
-          ))}
+      {displayCustomerEnd?.siteVideo && (
+        <PreviewSection title="Site Video">
+          <Box
+            component="video"
+            src={displayCustomerEnd.siteVideo}
+            controls
+            sx={{
+              width: '100%',
+              maxWidth: 800,
+              borderRadius: 2,
+              border: '2px solid',
+              borderColor: 'divider',
+            }}
+          />
         </PreviewSection>
       )}
 
@@ -460,6 +460,9 @@ const ICPreviewScreen = () => {
       {displayTowerEnd?.router && (
         <PreviewSection title="Router Details">
           <Typography>Type: {displayTowerEnd.router.routerType}</Typography>
+          {displayTowerEnd.router.routerModel && (
+            <Typography>Model: {displayTowerEnd.router.routerModel}</Typography>
+          )}
           <Typography>Serial Number: {displayTowerEnd.router.serialNumber}</Typography>
           <Typography sx={{ mt: 1, fontWeight: 'bold' }}>Router Images:</Typography>
           <ImagePreview 
@@ -479,6 +482,9 @@ const ICPreviewScreen = () => {
       {displayTowerEnd?.radio && (
         <PreviewSection title="Radio Details">
           <Typography>Type: {displayTowerEnd.radio.radioType}</Typography>
+          {displayTowerEnd.radio.radioModel && (
+            <Typography>Model: {displayTowerEnd.radio.radioModel}</Typography>
+          )}
           <Typography>Serial Number: {displayTowerEnd.radio.serialNumber}</Typography>
           <Typography>
             LAN Cable Reading: {displayTowerEnd.radio.lanCableReading?.start} - {displayTowerEnd.radio.lanCableReading?.end}

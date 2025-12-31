@@ -14,8 +14,9 @@ import {
   DialogActions,
   Grid,
 } from '@mui/material';
-import { Edit, CameraAlt, Delete } from '@mui/icons-material';
+import { Edit, CameraAlt, Delete, Videocam } from '@mui/icons-material';
 import CameraComponent from '../CameraComponent';
+import VideoRecorderComponent from '../VideoRecorderComponent';
 
 const CustomerEndForm = ({ data, onUpdate, showError }) => {
   const [routerImages, setRouterImages] = useState(data?.router?.images?.routerImages || []);
@@ -33,9 +34,8 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
   const [currentPOE, setCurrentPOE] = useState(null);
   const [poeImages, setPOEImages] = useState([]);
   
-  const [showDesktopModal, setShowDesktopModal] = useState(false);
-  const [currentDesktop, setCurrentDesktop] = useState(null);
-  const [desktopImages, setDesktopImages] = useState([]);
+  const [siteVideo, setSiteVideo] = useState(data?.siteVideo || null);
+  const [showVideoRecorder, setShowVideoRecorder] = useState(false);
 
   // Camera state
   const [showCamera, setShowCamera] = useState(false);
@@ -47,6 +47,7 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
     setRouterImages(data?.router?.images?.routerImages || []);
     setConnectivityImages(data?.router?.images?.cableConnectivityImages || []);
     setRadioImages(data?.radio?.images || []);
+    setSiteVideo(data?.siteVideo || null);
   }, [data]);
 
   const openCamera = (type, maxImages, context = 'main') => {
@@ -118,13 +119,6 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
         setPOEImages([...poeImages, base64]);
         break;
 
-      case 'desktop':
-        if (desktopImages.length >= cameraMaxImages) {
-          showError(`Maximum ${cameraMaxImages} desktop switch images allowed`);
-          return;
-        }
-        setDesktopImages([...desktopImages, base64]);
-        break;
     }
     setShowCamera(false);
   };
@@ -137,7 +131,6 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
       case 'rack': return rackImages;
       case 'ap': return apImages;
       case 'poe': return poeImages;
-      case 'desktop': return desktopImages;
       default: return [];
     }
   };
@@ -206,7 +199,7 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
     setCurrentAP({
       apNumber: (data?.aps?.length || 0) + 1,
       make: 'Grandstream',
-      model: '7604',
+      model: '',
       serialNumber: '',
       floor: 'Ground',
       lanCableReading: { start: '', end: '' },
@@ -252,7 +245,7 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
     setCurrentPOE({
       poeNumber: (data?.poeSwitches?.length || 0) + 1,
       make: 'Grandstream',
-      model: '7604',
+      model: '',
       serialNumber: '',
       itRackNumber: '',
       location: '',
@@ -302,58 +295,10 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
     setShowPOEModal(true);
   };
 
-  const handleAddDesktop = () => {
-    setCurrentDesktop({
-      desktopNumber: (data?.desktopSwitches?.length || 0) + 1,
-      make: 'Grandstream',
-      model: '7604',
-      serialNumber: '',
-      itRackNumber: '',
-      location: '',
-      images: []
-    });
-    setDesktopImages([]);
-    setShowDesktopModal(true);
-  };
-
-  const handleSaveDesktop = () => {
-    if (!currentDesktop.serialNumber) {
-      showError('Please enter desktop switch serial number');
-      return;
-    }
-    if (!currentDesktop.itRackNumber) {
-      showError('Please select IT rack number');
-      return;
-    }
-    if (!currentDesktop.location) {
-      showError('Please enter desktop switch location');
-      return;
-    }
-    if (desktopImages.length < 2) {
-      showError('Please add at least 2 desktop switch images');
-      return;
-    }
-
-    const updatedDesktop = {
-      ...currentDesktop,
-      images: desktopImages
-    };
-
-    const updatedDesktops = [...(data?.desktopSwitches || [])];
-    if (currentDesktop.desktopNumber <= updatedDesktops.length) {
-      updatedDesktops[currentDesktop.desktopNumber - 1] = updatedDesktop;
-    } else {
-      updatedDesktops.push(updatedDesktop);
-    }
-
-    onUpdate({ desktopSwitches: updatedDesktops });
-    setShowDesktopModal(false);
-  };
-
-  const handleEditDesktop = (desktop) => {
-    setCurrentDesktop(desktop);
-    setDesktopImages(desktop.images || []);
-    setShowDesktopModal(true);
+  const handleVideoRecord = (base64Video) => {
+    setSiteVideo(base64Video);
+    onUpdate({ siteVideo: base64Video });
+    setShowVideoRecorder(false);
   };
 
   return (
@@ -375,7 +320,7 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
         <ToggleButtonGroup
           value={data?.router?.routerType || ''}
           exclusive
-          onChange={(e, value) => value && updateRouterData({ routerType: value })}
+          onChange={(e, value) => value && updateRouterData({ routerType: value, routerModel: '' })}
           sx={{ 
             mb: 2,
             flexWrap: 'wrap',
@@ -384,14 +329,87 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
               flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
               minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
               textTransform: 'none',
+              '&.Mui-selected': {
+                backgroundColor: '#667eea',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: '#5568d3',
+                },
+              },
             },
           }}
         >
-          <ToggleButton value="HEX">HEX</ToggleButton>
-          <ToggleButton value="HEX-S">HEX-S</ToggleButton>
-          <ToggleButton value="HAP">HAP</ToggleButton>
+          <ToggleButton value="Mikrotik">Mikrotik</ToggleButton>
           <ToggleButton value="CCR">CCR</ToggleButton>
         </ToggleButtonGroup>
+
+        {data?.router?.routerType === 'Mikrotik' && (
+          <>
+            <Typography variant="body2" sx={{ mb: 1.5, mt: 2, fontWeight: 500 }}>
+              Mikrotik Model
+            </Typography>
+            <ToggleButtonGroup
+              value={data?.router?.routerModel || ''}
+              exclusive
+              onChange={(e, value) => value && updateRouterData({ routerModel: value })}
+              sx={{ 
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1,
+                '& .MuiToggleButton-root': {
+                  flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
+                  minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
+                  textTransform: 'none',
+                  '&.Mui-selected': {
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#5568d3',
+                    },
+                  },
+                },
+              }}
+            >
+              <ToggleButton value="L009">L009</ToggleButton>
+              <ToggleButton value="hexS 760iGS">hexS 760iGS</ToggleButton>
+              <ToggleButton value="hex 750Gr3">hex 750Gr3</ToggleButton>
+            </ToggleButtonGroup>
+          </>
+        )}
+
+        {data?.router?.routerType === 'CCR' && (
+          <>
+            <Typography variant="body2" sx={{ mb: 1.5, mt: 2, fontWeight: 500 }}>
+              CCR Model
+            </Typography>
+            <ToggleButtonGroup
+              value={data?.router?.routerModel || ''}
+              exclusive
+              onChange={(e, value) => value && updateRouterData({ routerModel: value })}
+              sx={{ 
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1,
+                '& .MuiToggleButton-root': {
+                  flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
+                  minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
+                  textTransform: 'none',
+                  '&.Mui-selected': {
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#5568d3',
+                    },
+                  },
+                },
+              }}
+            >
+              <ToggleButton value="2004-1G-12S+2XS">2004-1G-12S+2XS</ToggleButton>
+              <ToggleButton value="2004-16G-2S+">2004-16G-2S+</ToggleButton>
+              <ToggleButton value="2116-12G-4S+">2116-12G-4S+</ToggleButton>
+            </ToggleButtonGroup>
+          </>
+        )}
 
         <TextField
           fullWidth
@@ -518,7 +536,7 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
         <ToggleButtonGroup
           value={data?.radio?.radioType || ''}
           exclusive
-          onChange={(e, value) => value && updateRadioData({ radioType: value })}
+          onChange={(e, value) => value && updateRadioData({ radioType: value, radioModel: '' })}
           sx={{ 
             mb: 2,
             flexWrap: 'wrap',
@@ -527,13 +545,56 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
               flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
               minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
               textTransform: 'none',
+              '&.Mui-selected': {
+                backgroundColor: '#667eea',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: '#5568d3',
+                },
+              },
             },
           }}
         >
           <ToggleButton value="LHG5">LHG5</ToggleButton>
           <ToggleButton value="DIISC LITE">DIISC LITE</ToggleButton>
-          <ToggleButton value="MIMOSA">MIMOSA</ToggleButton>
+          <ToggleButton value="Mimosa">Mimosa</ToggleButton>
         </ToggleButtonGroup>
+
+        {data?.radio?.radioType === 'Mimosa' && (
+          <>
+            <Typography variant="body2" sx={{ mb: 1.5, mt: 2, fontWeight: 500 }}>
+              Mimosa Model
+            </Typography>
+            <ToggleButtonGroup
+              value={data?.radio?.radioModel || ''}
+              exclusive
+              onChange={(e, value) => value && updateRadioData({ radioModel: value })}
+              sx={{ 
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1,
+                '& .MuiToggleButton-root': {
+                  flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
+                  minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
+                  textTransform: 'none',
+                  '&.Mui-selected': {
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: '#5568d3',
+                    },
+                  },
+                },
+              }}
+            >
+              <ToggleButton value="C6X">C6X</ToggleButton>
+              <ToggleButton value="C5X with Mimosa Antenna">C5X with Mimosa Antenna</ToggleButton>
+              <ToggleButton value="C5X with Fibergate Antenna">C5X with Fibergate Antenna</ToggleButton>
+              <ToggleButton value="B6X with Mimosa Antenna">B6X with Mimosa Antenna</ToggleButton>
+              <ToggleButton value="Ethernet surge protector">Ethernet surge protector</ToggleButton>
+            </ToggleButtonGroup>
+          </>
+        )}
 
         <TextField
           fullWidth
@@ -811,65 +872,79 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
         ))}
       </Paper>
 
-      {/* Desktop Switch Details */}
+      {/* Site Video Recording */}
       <Paper 
         sx={{ 
           p: { xs: 2, sm: 3 },
           borderRadius: 2,
         }}
       >
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 2,
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 2, sm: 0 },
-        }}>
-          <Typography variant="h6" fontWeight="bold">
-            Desktop Switch Details
-          </Typography>
-          {(data?.desktopSwitches?.length || 0) < 5 && (
-            <Button 
-              variant="contained" 
-              onClick={handleAddDesktop}
-              sx={{
-                width: { xs: '100%', sm: 'auto' },
-              }}
-            >
-              Add Desktop Switch
-            </Button>
-          )}
-        </Box>
-
-        {data?.desktopSwitches?.map((desktop, index) => (
-          <Paper key={index} sx={{ p: 2, mb: 1, backgroundColor: '#f5f5f5' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                Desktop Switch {desktop.desktopNumber}
-              </Typography>
-              <IconButton onClick={() => handleEditDesktop(desktop)}>
-                <Edit />
+        <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ mb: 2 }}>
+          Site Video (30-45 seconds)
+        </Typography>
+        <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+          Record a short video (30-45 seconds) of the site. Maximum size: 20MB
+        </Typography>
+        
+        {siteVideo ? (
+          <Box sx={{ mt: 2 }}>
+            <Box sx={{ position: 'relative', mb: 2 }}>
+              <Box
+                component="video"
+                src={siteVideo}
+                controls
+                sx={{
+                  width: '100%',
+                  maxWidth: 600,
+                  borderRadius: 2,
+                  border: '2px solid',
+                  borderColor: 'divider',
+                }}
+              />
+              <IconButton
+                onClick={() => {
+                  setSiteVideo(null);
+                  onUpdate({ siteVideo: null });
+                }}
+                sx={{
+                  position: 'absolute',
+                  top: -8,
+                  right: -8,
+                  backgroundColor: 'error.main',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'error.dark',
+                  },
+                }}
+              >
+                <Delete />
               </IconButton>
             </Box>
-            <Typography>Make: {desktop.make}</Typography>
-            <Typography>Model: {desktop.model}</Typography>
-            <Typography>Serial Number: {desktop.serialNumber}</Typography>
-            <Typography>IT Rack: {desktop.itRackNumber}</Typography>
-            <Typography>Location: {desktop.location}</Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-              {desktop.images?.map((uri, imgIndex) => (
-                <Box
-                  key={imgIndex}
-                  component="img"
-                  src={uri}
-                  alt={`Desktop ${desktop.desktopNumber} Image ${imgIndex + 1}`}
-                  sx={{ width: 60, height: 60, borderRadius: 0.5, objectFit: 'cover' }}
-                />
-              ))}
-            </Box>
-          </Paper>
-        ))}
+            <Button
+              variant="outlined"
+              startIcon={<Videocam />}
+              onClick={() => setShowVideoRecorder(true)}
+              sx={{ mt: 1 }}
+            >
+              Record New Video
+            </Button>
+          </Box>
+        ) : (
+          <Button
+            variant="contained"
+            startIcon={<Videocam />}
+            onClick={() => setShowVideoRecorder(true)}
+            sx={{
+              mt: 1,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+              },
+            }}
+          >
+            Record Video
+          </Button>
+        )}
       </Paper>
 
       {/* Modals */}
@@ -884,7 +959,18 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
             value={currentRack?.rackType || '2U'}
             exclusive
             onChange={(e, value) => value && setCurrentRack(prev => ({ ...prev, rackType: value }))}
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              '& .MuiToggleButton-root': {
+                '&.Mui-selected': {
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#5568d3',
+                  },
+                },
+              },
+            }}
           >
             <ToggleButton value="2U">2U</ToggleButton>
             <ToggleButton value="4U">4U</ToggleButton>
@@ -897,7 +983,18 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
             value={currentRack?.floor || 'Ground'}
             exclusive
             onChange={(e, value) => value && setCurrentRack(prev => ({ ...prev, floor: value }))}
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              '& .MuiToggleButton-root': {
+                '&.Mui-selected': {
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#5568d3',
+                  },
+                },
+              },
+            }}
           >
             <ToggleButton value="Ground">G</ToggleButton>
             <ToggleButton value="1">1</ToggleButton>
@@ -1011,25 +1108,86 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
           <ToggleButtonGroup
             value={currentAP?.make || 'Grandstream'}
             exclusive
-            onChange={(e, value) => value && setCurrentAP(prev => ({ ...prev, make: value }))}
-            sx={{ mb: 2 }}
+            onChange={(e, value) => value && setCurrentAP(prev => ({ ...prev, make: value, model: '' }))}
+            sx={{ 
+              mb: 2,
+              '& .MuiToggleButton-root': {
+                '&.Mui-selected': {
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#5568d3',
+                  },
+                },
+              },
+            }}
           >
             <ToggleButton value="Grandstream">Grandstream</ToggleButton>
             <ToggleButton value="Other">Other</ToggleButton>
           </ToggleButtonGroup>
 
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            Model
-          </Typography>
-          <ToggleButtonGroup
-            value={currentAP?.model || '7604'}
-            exclusive
-            onChange={(e, value) => value && setCurrentAP(prev => ({ ...prev, model: value }))}
-            sx={{ mb: 2 }}
-          >
-            <ToggleButton value="7604">7604</ToggleButton>
-            <ToggleButton value="7603">7603</ToggleButton>
-          </ToggleButtonGroup>
+          {currentAP?.make === 'Grandstream' && (
+            <>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Model
+              </Typography>
+              <ToggleButtonGroup
+                value={currentAP?.model || ''}
+                exclusive
+                onChange={(e, value) => value && setCurrentAP(prev => ({ ...prev, model: value }))}
+                sx={{ 
+                  mb: 2,
+                  flexWrap: 'wrap',
+                  gap: 1,
+                  '& .MuiToggleButton-root': {
+                    flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
+                    minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
+                    textTransform: 'none',
+                    '&.Mui-selected': {
+                      backgroundColor: '#667eea',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: '#5568d3',
+                      },
+                    },
+                  },
+                }}
+              >
+                <ToggleButton value="7605">7605</ToggleButton>
+                <ToggleButton value="7660E">7660E</ToggleButton>
+                <ToggleButton value="7605LR">7605LR</ToggleButton>
+                <ToggleButton value="7660E LR">7660E LR</ToggleButton>
+              </ToggleButtonGroup>
+            </>
+          )}
+
+          {currentAP?.make === 'Other' && (
+            <>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                Model
+              </Typography>
+              <ToggleButtonGroup
+                value={currentAP?.model || ''}
+                exclusive
+                onChange={(e, value) => value && setCurrentAP(prev => ({ ...prev, model: value }))}
+                sx={{ 
+                  mb: 2,
+                  '& .MuiToggleButton-root': {
+                    '&.Mui-selected': {
+                      backgroundColor: '#667eea',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: '#5568d3',
+                      },
+                    },
+                  },
+                }}
+              >
+                <ToggleButton value="7604">7604</ToggleButton>
+                <ToggleButton value="7603">7603</ToggleButton>
+              </ToggleButtonGroup>
+            </>
+          )}
 
           <TextField
             fullWidth
@@ -1046,7 +1204,18 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
             value={currentAP?.floor || 'Ground'}
             exclusive
             onChange={(e, value) => value && setCurrentAP(prev => ({ ...prev, floor: value }))}
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              '& .MuiToggleButton-root': {
+                '&.Mui-selected': {
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#5568d3',
+                  },
+                },
+              },
+            }}
           >
             <ToggleButton value="Ground">G</ToggleButton>
             <ToggleButton value="1">1</ToggleButton>
@@ -1176,26 +1345,70 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
           <ToggleButtonGroup
             value={currentPOE?.make || 'Grandstream'}
             exclusive
-            onChange={(e, value) => value && setCurrentPOE(prev => ({ ...prev, make: value }))}
-            sx={{ mb: 2 }}
+            onChange={(e, value) => value && setCurrentPOE(prev => ({ ...prev, make: value, model: '' }))}
+            sx={{ 
+              mb: 2,
+              flexWrap: 'wrap',
+              gap: 1,
+              '& .MuiToggleButton-root': {
+                '&.Mui-selected': {
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#5568d3',
+                  },
+                },
+              },
+            }}
           >
             <ToggleButton value="Grandstream">Grandstream</ToggleButton>
             <ToggleButton value="Digisol">Digisol</ToggleButton>
             <ToggleButton value="Dlink">Dlink</ToggleButton>
             <ToggleButton value="Syrotech">Syrotech</ToggleButton>
+            <ToggleButton value="Mikrotik">Mikrotik</ToggleButton>
           </ToggleButtonGroup>
 
           <Typography variant="body2" sx={{ mb: 1 }}>
             Model
           </Typography>
           <ToggleButtonGroup
-            value={currentPOE?.model || '7604'}
+            value={currentPOE?.model || ''}
             exclusive
             onChange={(e, value) => value && setCurrentPOE(prev => ({ ...prev, model: value }))}
-            sx={{ mb: 2 }}
+            sx={{ 
+              mb: 2,
+              flexWrap: 'wrap',
+              gap: 1,
+              '& .MuiToggleButton-root': {
+                flex: { xs: '1 1 calc(50% - 8px)', sm: '1 1 auto' },
+                minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' },
+                textTransform: 'none',
+                '&.Mui-selected': {
+                  backgroundColor: '#667eea',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: '#5568d3',
+                  },
+                },
+              },
+            }}
           >
-            <ToggleButton value="7604">7604</ToggleButton>
-            <ToggleButton value="7603">7603</ToggleButton>
+            {currentPOE?.make === 'Grandstream' && (
+              <>
+                <ToggleButton value="GWN 7803">GWN 7803</ToggleButton>
+                <ToggleButton value="7604">7604</ToggleButton>
+                <ToggleButton value="7603">7603</ToggleButton>
+              </>
+            )}
+            {currentPOE?.make === 'Mikrotik' && (
+              <ToggleButton value="CRS106">CRS106</ToggleButton>
+            )}
+            {(currentPOE?.make === 'Digisol' || currentPOE?.make === 'Dlink' || currentPOE?.make === 'Syrotech') && (
+              <>
+                <ToggleButton value="7604">7604</ToggleButton>
+                <ToggleButton value="7603">7603</ToggleButton>
+              </>
+            )}
           </ToggleButtonGroup>
 
           <TextField
@@ -1298,149 +1511,6 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
         </DialogActions>
       </Dialog>
 
-      {/* Desktop Modal */}
-      <Dialog 
-        open={showDesktopModal} 
-        onClose={() => setShowDesktopModal(false)} 
-        maxWidth="sm" 
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            m: { xs: 2, sm: 3 },
-            maxWidth: { xs: 'calc(100% - 32px)', sm: 500 },
-          },
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 600 }}>Desktop Switch Details</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1, mt: 1 }}>
-            Make
-          </Typography>
-          <ToggleButtonGroup
-            value={currentDesktop?.make || 'Grandstream'}
-            exclusive
-            onChange={(e, value) => value && setCurrentDesktop(prev => ({ ...prev, make: value }))}
-            sx={{ mb: 2 }}
-          >
-            <ToggleButton value="Grandstream">Grandstream</ToggleButton>
-            <ToggleButton value="Digisol">Digisol</ToggleButton>
-            <ToggleButton value="Dlink">Dlink</ToggleButton>
-            <ToggleButton value="Syrotech">Syrotech</ToggleButton>
-          </ToggleButtonGroup>
-
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            Model
-          </Typography>
-          <ToggleButtonGroup
-            value={currentDesktop?.model || '7604'}
-            exclusive
-            onChange={(e, value) => value && setCurrentDesktop(prev => ({ ...prev, model: value }))}
-            sx={{ mb: 2 }}
-          >
-            <ToggleButton value="7604">7604</ToggleButton>
-            <ToggleButton value="7603">7603</ToggleButton>
-          </ToggleButtonGroup>
-
-          <TextField
-            fullWidth
-            label="Serial Number"
-            value={currentDesktop?.serialNumber || ''}
-            onChange={(e) => setCurrentDesktop(prev => ({ ...prev, serialNumber: e.target.value }))}
-            margin="normal"
-          />
-
-          <TextField
-            fullWidth
-            label="IT Rack Number"
-            type="number"
-            value={currentDesktop?.itRackNumber || ''}
-            onChange={(e) => setCurrentDesktop(prev => ({ ...prev, itRackNumber: e.target.value }))}
-            margin="normal"
-          />
-
-          <TextField
-            fullWidth
-            label="Location"
-            value={currentDesktop?.location || ''}
-            onChange={(e) => setCurrentDesktop(prev => ({ ...prev, location: e.target.value }))}
-            margin="normal"
-          />
-
-          <Typography variant="body2" sx={{ mt: 2, mb: 1 }}>
-            Installation Images (2 required)
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            {desktopImages.map((uri, index) => (
-              <Box key={index} sx={{ position: 'relative' }}>
-                <Box
-                  component="img"
-                  src={uri}
-                  alt={`Desktop Image ${index + 1}`}
-                  sx={{ width: 100, height: 100, borderRadius: 1, objectFit: 'cover' }}
-                />
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    setDesktopImages(desktopImages.filter((_, i) => i !== index));
-                  }}
-                  sx={{
-                    position: 'absolute',
-                    top: -8,
-                    right: -8,
-                    backgroundColor: 'error.main',
-                    color: 'white',
-                    width: 24,
-                    height: 24,
-                    '&:hover': {
-                      backgroundColor: 'error.dark',
-                    },
-                  }}
-                >
-                  <Delete sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Box>
-            ))}
-            {desktopImages.length < 2 && (
-              <Button
-                variant="outlined"
-                onClick={() => openCamera('desktop', 2, 'desktop')}
-                startIcon={<CameraAlt />}
-                sx={{ 
-                  width: { xs: 80, sm: 100 },
-                  height: { xs: 80, sm: 100 },
-                  minWidth: { xs: 80, sm: 100 },
-                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                  flexDirection: 'column',
-                  gap: 0.5,
-                }}
-              >
-                Capture
-              </Button>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button 
-            onClick={() => setShowDesktopModal(false)}
-            sx={{ textTransform: 'none' }}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSaveDesktop} 
-            variant="contained"
-            sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-              },
-            }}
-          >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       <CameraComponent
         open={showCamera}
@@ -1448,6 +1518,14 @@ const CustomerEndForm = ({ data, onUpdate, showError }) => {
         onCapture={handleImageCapture}
         maxImages={cameraMaxImages}
         currentImages={getCurrentImagesForCamera()}
+      />
+
+      <VideoRecorderComponent
+        open={showVideoRecorder}
+        onClose={() => setShowVideoRecorder(false)}
+        onRecord={handleVideoRecord}
+        minDuration={30}
+        maxDuration={45}
       />
     </Box>
   );

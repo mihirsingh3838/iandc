@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   Box,
@@ -15,11 +15,13 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { ArrowBack, Home, Close, ZoomIn } from '@mui/icons-material';
+import { ArrowBack, Home, Close, ZoomIn, PictureAsPdf } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import icSubmissionService from '../services/icSubmissionService';
 import apiClient from '../utils/axiosConfig';
 import { useAuth } from '../context/AuthContext';
+import facilitiesData from '../data/facilities.json';
+import { generatePDFReport } from '../utils/pdfGenerator';
 
 const ImagePreview = ({ images, size = 'small', onImageClick, isAdmin = false }) => {
   const handleClick = (image) => {
@@ -87,8 +89,22 @@ const ICPreviewScreen = () => {
   const [submissionData, setSubmissionData] = useState(null);
   const [viewMode, setViewMode] = useState(false);
   const [imageDialog, setImageDialog] = useState({ open: false, imageUrl: null });
+  const [generatingPDF, setGeneratingPDF] = useState(false);
   
   const isAdmin = user?.role === 'admin' || user?.username === 'admin';
+
+  // Create facility mapping
+  const facilityMap = useMemo(() => {
+    const map = {};
+    facilitiesData.forEach(facility => {
+      map[facility.facility_code] = facility.facility_name;
+    });
+    return map;
+  }, []);
+
+  const getFacilityName = (facilityId) => {
+    return facilityMap[facilityId] || facilityId;
+  };
 
   useEffect(() => {
     if (submissionId) {
@@ -134,6 +150,27 @@ const ICPreviewScreen = () => {
       toast.error(error.response?.data?.message || 'Error submitting form');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGeneratePDF = async () => {
+    if (!submissionData) {
+      toast.error('No submission data available');
+      return;
+    }
+
+    try {
+      setGeneratingPDF(true);
+      const facilityName = getFacilityName(submissionData.facilityId || facilityId);
+      const submitterName = submissionData.userId?.name || submissionData.userId?.username || 'Unknown';
+      
+      await generatePDFReport(submissionData, facilityName, submitterName);
+      toast.success('PDF report generated successfully');
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      toast.error('Error generating PDF report');
+    } finally {
+      setGeneratingPDF(false);
     }
   };
 
@@ -218,6 +255,60 @@ const ICPreviewScreen = () => {
       </AppBar>
 
       <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 }, px: { xs: 2, sm: 3 } }}>
+        {/* Show site name and submitter name for admins */}
+        {isAdmin && submissionData && (
+          <Paper 
+            sx={{ 
+              p: { xs: 2, sm: 3 },
+              mb: 3,
+              mt: 2,
+              borderRadius: 2,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+            }}
+          >
+            <Typography 
+              variant="h5" 
+              gutterBottom 
+              fontWeight="bold"
+              sx={{ mb: 2 }}
+            >
+              Site: {getFacilityName(submissionData.facilityId || facilityId)}
+            </Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ mb: 2 }}
+            >
+              Submitted By: {submissionData.userId?.name || submissionData.userId?.username || 'Unknown'}
+            </Typography>
+            {submissionData.submittedAt && (
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                Submission Date: {new Date(submissionData.submittedAt).toLocaleString()}
+              </Typography>
+            )}
+            <Box sx={{ mt: 2 }}>
+              <Button
+                variant="contained"
+                startIcon={generatingPDF ? <CircularProgress size={20} color="inherit" /> : <PictureAsPdf />}
+                onClick={handleGeneratePDF}
+                disabled={generatingPDF}
+                sx={{
+                  backgroundColor: 'white',
+                  color: '#667eea',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  },
+                  '&:disabled': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                  },
+                }}
+              >
+                {generatingPDF ? 'Generating PDF...' : 'Download PDF Report'}
+              </Button>
+            </Box>
+          </Paper>
+        )}
+
         <Typography 
           variant="h4" 
           gutterBottom 

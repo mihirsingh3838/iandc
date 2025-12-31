@@ -91,7 +91,7 @@ const ICPreviewScreen = () => {
   const [imageDialog, setImageDialog] = useState({ open: false, imageUrl: null });
   const [generatingPDF, setGeneratingPDF] = useState(false);
   
-  const isAdmin = user?.role === 'admin' || user?.username === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'vendor' || user?.username === 'admin';
 
   // Create facility mapping
   const facilityMap = useMemo(() => {
@@ -224,7 +224,7 @@ const ICPreviewScreen = () => {
             edge="start"
             color="inherit"
             onClick={() => {
-              if (user?.role === 'admin' || user?.username === 'admin') {
+              if (user?.role === 'admin' || user?.role === 'vendor' || user?.username === 'admin') {
                 navigate('/admin');
               } else {
                 navigate('/ic-submission');
@@ -504,8 +504,8 @@ const ICPreviewScreen = () => {
         </PreviewSection>
       )}
 
-        {/* Only show Edit/Submit buttons for regular users, not admins */}
-        {(user?.role !== 'admin' && user?.username !== 'admin') && !viewMode && (
+        {/* Only show Edit/Submit buttons for regular users, not admins or vendors */}
+        {(user?.role !== 'admin' && user?.role !== 'vendor' && user?.username !== 'admin') && !viewMode && (
           <Box sx={{ 
             display: 'flex', 
             gap: 2, 
@@ -545,8 +545,8 @@ const ICPreviewScreen = () => {
             </Button>
           </Box>
         )}
-        {/* Show back button for admins */}
-        {(user?.role === 'admin' || user?.username === 'admin') && (
+        {/* Show back button for admins and vendors */}
+        {(user?.role === 'admin' || user?.role === 'vendor' || user?.username === 'admin') && (
           <Box sx={{ mt: 4 }}>
             <Button
               variant="contained"
@@ -561,7 +561,7 @@ const ICPreviewScreen = () => {
                 },
               }}
             >
-              Back to Admin Dashboard
+              Back to {user?.role === 'vendor' ? 'Vendor' : 'Admin'} Dashboard
             </Button>
           </Box>
         )}

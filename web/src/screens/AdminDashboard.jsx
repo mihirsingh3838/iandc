@@ -37,7 +37,7 @@ import facilitiesData from '../data/facilities.json';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [submissions, setSubmissions] = useState([]);
   const [groupedSubmissions, setGroupedSubmissions] = useState({});
   const [insights, setInsights] = useState(null);
@@ -343,7 +343,7 @@ const AdminDashboard = () => {
       >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Admin Dashboard
+            {user?.role === 'vendor' ? 'Vendor Dashboard' : 'Admin Dashboard'}
           </Typography>
           <IconButton color="inherit" onClick={fetchData} sx={{ mr: 1 }}>
             <Refresh />

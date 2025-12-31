@@ -35,7 +35,7 @@ const PrivateRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" replace />;
 };
 
-// Route that only allows admin users
+// Route that only allows admin and vendor users
 const AdminRoute = ({ children }) => {
   const { user, loading } = useAuth();
   
@@ -59,7 +59,7 @@ const AdminRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
-  if (user.role !== 'admin' && user.username !== 'admin') {
+  if (user.role !== 'admin' && user.role !== 'vendor' && user.username !== 'admin') {
     return <Navigate to="/home" replace />;
   }
   
@@ -90,7 +90,7 @@ const UserRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
-  if (user.role === 'admin' || user.username === 'admin') {
+  if (user.role === 'admin' || user.role === 'vendor' || user.username === 'admin') {
     return <Navigate to="/admin" replace />;
   }
   

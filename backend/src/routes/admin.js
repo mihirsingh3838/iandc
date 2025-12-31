@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const adminAuth = require('../middleware/adminAuth');
+const vendorAuth = require('../middleware/vendorAuth');
 const adminController = require('../controllers/adminController');
 
-// All admin routes require authentication and admin role
+// All admin routes require authentication and admin/vendor role
 router.use(auth);
-router.use(adminAuth);
+router.use(vendorAuth);
 
 router.get('/submissions', adminController.getAllSubmissions);
 router.get('/submissions/by-facility', adminController.getSubmissionsByFacility);

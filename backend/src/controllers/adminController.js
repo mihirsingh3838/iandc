@@ -2,10 +2,32 @@ const ICSubmission = require('../models/ICSubmission');
 const Attendance = require('../models/Attendance');
 const User = require('../models/User');
 
+// Helper function to get username prefix filter for vendors
+const getVendorFilter = async (vendorUsername) => {
+  // Extract prefix from vendor username (e.g., "wdc_admin" -> "wdc")
+  const prefix = vendorUsername.replace(/_admin$/, '');
+  
+  // Find all users whose username starts with the prefix
+  const users = await User.find({ 
+    username: { $regex: `^${prefix}`, $options: 'i' } 
+  }).select('_id');
+  
+  const userIds = users.map(user => user._id);
+  return { userId: { $in: userIds } };
+};
+
 // Get all I&C submissions with user and facility details
 const getAllSubmissions = async (req, res) => {
   try {
-    const submissions = await ICSubmission.find({ status: { $in: ['submitted', 'approved', 'rejected'] } })
+    let query = { status: { $in: ['submitted', 'approved', 'rejected'] } };
+    
+    // If user is a vendor, filter by username prefix
+    if (req.user.role === 'vendor' && req.user.username) {
+      const vendorFilter = await getVendorFilter(req.user.username);
+      query = { ...query, ...vendorFilter };
+    }
+    
+    const submissions = await ICSubmission.find(query)
       .populate('userId', 'name username')
       .sort({ submittedAt: -1 });
 
@@ -19,7 +41,15 @@ const getAllSubmissions = async (req, res) => {
 // Get submissions grouped by facility
 const getSubmissionsByFacility = async (req, res) => {
   try {
-    const submissions = await ICSubmission.find({ status: { $in: ['submitted', 'approved', 'rejected'] } })
+    let query = { status: { $in: ['submitted', 'approved', 'rejected'] } };
+    
+    // If user is a vendor, filter by username prefix
+    if (req.user.role === 'vendor' && req.user.username) {
+      const vendorFilter = await getVendorFilter(req.user.username);
+      query = { ...query, ...vendorFilter };
+    }
+    
+    const submissions = await ICSubmission.find(query)
       .populate('userId', 'name username')
       .sort({ submittedAt: -1 });
 
@@ -59,6 +89,18 @@ const reviewSubmission = async (req, res) => {
       return res.status(400).json({ message: 'Cannot review draft submissions' });
     }
 
+    // If user is a vendor, verify they can review this submission
+    if (req.user.role === 'vendor' && req.user.username) {
+      const vendorFilter = await getVendorFilter(req.user.username);
+      const canReview = await ICSubmission.findOne({ 
+        _id: id, 
+        ...vendorFilter 
+      });
+      if (!canReview) {
+        return res.status(403).json({ message: 'You can only review submissions from your vendor group' });
+      }
+    }
+
     submission.approvalStatus = {
       reviewedBy: req.user.userId,
       reviewedAt: new Date(),
@@ -79,28 +121,40 @@ const reviewSubmission = async (req, res) => {
 // Get dashboard insights
 const getDashboardInsights = async (req, res) => {
   try {
-    const totalSubmissions = await ICSubmission.countDocuments({ status: { $in: ['submitted', 'approved', 'rejected'] } });
+    // Build base match query
+    let baseMatch = { status: { $in: ['submitted', 'approved', 'rejected'] } };
+    
+    // If user is a vendor, filter by username prefix
+    if (req.user.role === 'vendor' && req.user.username) {
+      const vendorFilter = await getVendorFilter(req.user.username);
+      baseMatch = { ...baseMatch, ...vendorFilter };
+    }
+    
+    const totalSubmissions = await ICSubmission.countDocuments(baseMatch);
     const pendingSubmissions = await ICSubmission.countDocuments({ 
+      ...baseMatch,
       status: 'submitted',
       'approvalStatus.reviewStatus': 'pending'
     });
     const approvedSubmissions = await ICSubmission.countDocuments({ 
+      ...baseMatch,
       'approvalStatus.reviewStatus': 'approved'
     });
     const rejectedSubmissions = await ICSubmission.countDocuments({ 
+      ...baseMatch,
       'approvalStatus.reviewStatus': 'rejected'
     });
 
     // Get submissions by facility
     const submissionsByFacility = await ICSubmission.aggregate([
-      { $match: { status: { $in: ['submitted', 'approved', 'rejected'] } } },
+      { $match: baseMatch },
       { $group: { _id: '$facilityId', count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
 
     // Get submissions by user
     const submissionsByUser = await ICSubmission.aggregate([
-      { $match: { status: { $in: ['submitted', 'approved', 'rejected'] } } },
+      { $match: baseMatch },
       { $group: { _id: '$userId', count: { $sum: 1 } } },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
       { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
@@ -109,7 +163,7 @@ const getDashboardInsights = async (req, res) => {
     ]);
 
     // Get recent submissions
-    const recentSubmissions = await ICSubmission.find({ status: { $in: ['submitted', 'approved', 'rejected'] } })
+    const recentSubmissions = await ICSubmission.find(baseMatch)
       .populate('userId', 'name username')
       .sort({ submittedAt: -1 })
       .limit(10);
@@ -132,7 +186,15 @@ const getDashboardInsights = async (req, res) => {
 // Get all attendance records
 const getAllAttendance = async (req, res) => {
   try {
-    const attendance = await Attendance.find()
+    let query = {};
+    
+    // If user is a vendor, filter by username prefix
+    if (req.user.role === 'vendor' && req.user.username) {
+      const vendorFilter = await getVendorFilter(req.user.username);
+      query = vendorFilter;
+    }
+    
+    const attendance = await Attendance.find(query)
       .populate('userId', 'name username')
       .sort({ timestamp: -1 })
       .limit(1000); // Limit to recent 1000 records

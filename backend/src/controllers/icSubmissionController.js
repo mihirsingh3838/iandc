@@ -216,7 +216,8 @@ const submit = async (req, res) => {
 const getById = async (req, res) => {
   try {
     const { id } = req.params;
-    const submission = await ICSubmission.findById(id);
+    const submission = await ICSubmission.findById(id)
+      .populate('userId', 'name username');
 
     if (!submission) {
       return res.status(404).json({ message: 'Submission not found' });

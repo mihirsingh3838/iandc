@@ -8,8 +8,9 @@ const lanCableReadingSchema = new mongoose.Schema({
 const routerSchema = new mongoose.Schema({
   routerType: {
     type: String,
-    enum: ['HEX', 'HEX-S', 'HAP', 'CCR']
+    enum: ['Mikrotik', 'CCR']
   },
+  routerModel: String, // For suboptions: L009, hexS 760iGS, hex 750Gr3, 2004-1G-12S+2XS, 2004-16G-2S+, 2116-12G-4S+
   serialNumber: String,
   images: {
     routerImages: [String],
@@ -20,8 +21,9 @@ const routerSchema = new mongoose.Schema({
 const radioSchema = new mongoose.Schema({
   radioType: {
     type: String,
-    enum: ['LHG5', 'DIISC LITE', 'MIMOSA']
+    enum: ['LHG5', 'DIISC LITE', 'Mimosa']
   },
+  radioModel: String, // For Mimosa suboptions: C6X, C5X with Mimosa Antenna, C5X with Fibergate Antenna, B6X with Mimosa Antenna, Ethernet surge protector
   serialNumber: String,
   lanCableReading: lanCableReadingSchema,
   images: [String]
@@ -49,7 +51,7 @@ const apSchema = new mongoose.Schema({
   },
   model: {
     type: String,
-    enum: ['7604', '7603']
+    enum: ['7605', '7660E', '7605LR', '7660E LR', '7604', '7603'] // Added new Grandstream models, kept old ones for backward compatibility
   },
   serialNumber: String,
   floor: {
@@ -64,11 +66,11 @@ const poeSwitchSchema = new mongoose.Schema({
   poeNumber: Number,
   make: {
     type: String,
-    enum: ['Grandstream', 'Digisol', 'Dlink', 'Syrotech']
+    enum: ['Grandstream', 'Digisol', 'Dlink', 'Syrotech', 'Mikrotik']
   },
   model: {
     type: String,
-    enum: ['7604', '7603']
+    enum: ['7604', '7603', 'GWN 7803', 'CRS106'] // Added new models
   },
   serialNumber: String,
   itRackNumber: String,
@@ -98,7 +100,7 @@ const customerEndSchema = new mongoose.Schema({
   itRacks: [itRackSchema],
   aps: [apSchema],
   poeSwitches: [poeSwitchSchema],
-  desktopSwitches: [desktopSwitchSchema]
+  siteVideo: String // URL to the uploaded video on Cloudinary
 });
 
 const towerEndSchema = new mongoose.Schema({

@@ -14,6 +14,34 @@ const uploadToCloudinary = async (base64Image) => {
   }
 };
 
+// Helper function to upload video to cloudinary with compression
+const uploadVideoToCloudinary = async (base64Video) => {
+  try {
+    // Check video size (20MB limit)
+    const base64Data = base64Video.split(',')[1] || base64Video;
+    const sizeInBytes = (base64Data.length * 3) / 4;
+    const sizeInMB = sizeInBytes / (1024 * 1024);
+    
+    if (sizeInMB > 20) {
+      throw new Error('Video size exceeds 20MB limit');
+    }
+
+    const result = await cloudinary.uploader.upload(base64Video, {
+      folder: 'ic_submissions/videos',
+      resource_type: 'video',
+      eager: [
+        { quality: 'auto', format: 'mp4', video_codec: 'h264' }
+      ],
+      eager_async: false,
+      chunk_size: 6000000 // 6MB chunks for large files
+    });
+    return result.secure_url;
+  } catch (error) {
+    console.error('Cloudinary video upload error:', error);
+    throw new Error(error.message || 'Failed to upload video');
+  }
+};
+
 // Helper function to upload multiple images
 const uploadImages = async (images) => {
   if (!images || !Array.isArray(images)) return [];
@@ -122,7 +150,7 @@ const saveDraft = async (req, res) => {
         itRacks: await processArrayWithImages(customerEnd.itRacks),
         aps: await processArrayWithImages(customerEnd.aps),
         poeSwitches: await processArrayWithImages(customerEnd.poeSwitches),
-        desktopSwitches: await processArrayWithImages(customerEnd.desktopSwitches)
+        siteVideo: customerEnd.siteVideo ? await uploadVideoToCloudinary(customerEnd.siteVideo) : undefined
       } : undefined,
       towerEnd: towerEnd ? await processTowerEndImages(towerEnd) : undefined
     };
@@ -184,7 +212,7 @@ const submit = async (req, res) => {
         itRacks: await processArrayWithImages(customerEnd.itRacks),
         aps: await processArrayWithImages(customerEnd.aps),
         poeSwitches: await processArrayWithImages(customerEnd.poeSwitches),
-        desktopSwitches: await processArrayWithImages(customerEnd.desktopSwitches)
+        siteVideo: customerEnd.siteVideo ? await uploadVideoToCloudinary(customerEnd.siteVideo) : undefined
       },
       towerEnd: await processTowerEndImages(towerEnd),
       status: 'submitted',

@@ -172,7 +172,15 @@ const AdminDashboard = () => {
                 )}
               </TableCell>
               <TableCell>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  {submission.customerEnd?.siteVideo && (
+                    <Chip
+                      label="Video"
+                      color="info"
+                      size="small"
+                      sx={{ mr: 1 }}
+                    />
+                  )}
                   <Button
                     size="small"
                     variant="outlined"
@@ -270,7 +278,15 @@ const AdminDashboard = () => {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        {submission.customerEnd?.siteVideo && (
+                          <Chip
+                            label="Video"
+                            color="info"
+                            size="small"
+                            sx={{ mr: 1 }}
+                          />
+                        )}
                         <Button
                           size="small"
                           variant="outlined"

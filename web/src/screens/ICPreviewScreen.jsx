@@ -119,6 +119,8 @@ const ICPreviewScreen = () => {
     setLoading(true);
     try {
       const response = await apiClient.get(`/api/ic-submission/submission/${id}`);
+      console.log('Fetched submission data:', response.data);
+      console.log('Customer end siteVideo:', response.data?.customerEnd?.siteVideo);
       setSubmissionData(response.data);
       setViewMode(true);
     } catch (error) {
@@ -442,14 +444,18 @@ const ICPreviewScreen = () => {
             component="video"
             src={displayCustomerEnd.siteVideo}
             controls
+            preload="metadata"
             sx={{
               width: '100%',
               maxWidth: 800,
               borderRadius: 2,
               border: '2px solid',
               borderColor: 'divider',
+              backgroundColor: '#000',
             }}
-          />
+          >
+            Your browser does not support the video tag.
+          </Box>
         </PreviewSection>
       )}
 

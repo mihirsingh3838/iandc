@@ -67,16 +67,23 @@ const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [submissionsRes, groupedRes, insightsRes, attendanceRes] = await Promise.all([
+      // Load critical data first (insights for dashboard cards)
+      const insightsRes = await apiClient.get('/api/admin/dashboard/insights');
+      setInsights(insightsRes.data);
+      
+      // Then load other data in parallel (non-blocking)
+      Promise.all([
         apiClient.get('/api/admin/submissions'),
         apiClient.get('/api/admin/submissions/by-facility'),
-        apiClient.get('/api/admin/dashboard/insights'),
         apiClient.get('/api/admin/attendance'),
-      ]);
-      setSubmissions(submissionsRes.data);
-      setGroupedSubmissions(groupedRes.data);
-      setInsights(insightsRes.data);
-      setAttendance(attendanceRes.data);
+      ]).then(([submissionsRes, groupedRes, attendanceRes]) => {
+        setSubmissions(submissionsRes.data);
+        setGroupedSubmissions(groupedRes.data);
+        setAttendance(attendanceRes.data);
+      }).catch((error) => {
+        console.error('Error loading secondary data:', error);
+        // Don't show error toast for secondary data, just log it
+      });
     } catch (error) {
       console.error('Error fetching data:', error);
       if (error.response?.status === 403) {

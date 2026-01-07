@@ -24,6 +24,17 @@ import facilitiesData from '../data/facilities.json';
 import { generatePDFReport } from '../utils/pdfGenerator';
 
 const ImagePreview = ({ images, size = 'small', onImageClick, isAdmin = false }) => {
+  const [loadedImages, setLoadedImages] = React.useState(new Set());
+  const [imageErrors, setImageErrors] = React.useState(new Set());
+
+  const handleImageLoad = (index) => {
+    setLoadedImages(prev => new Set(prev).add(index));
+  };
+
+  const handleImageError = (index) => {
+    setImageErrors(prev => new Set(prev).add(index));
+  };
+
   const handleClick = (image) => {
     if (isAdmin && onImageClick) {
       onImageClick(image);
@@ -34,28 +45,75 @@ const ImagePreview = ({ images, size = 'small', onImageClick, isAdmin = false })
     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 1.5 }}>
       {images?.map((image, index) => {
         const imageUrl = typeof image === 'string' ? image : image.url || image;
+        const isLoaded = loadedImages.has(index);
+        const hasError = imageErrors.has(index);
+        
         return (
           <Box
             key={index}
-            component="img"
-            src={imageUrl}
-            alt={`Preview ${index + 1}`}
-            onClick={() => handleClick(imageUrl)}
             sx={{
+              position: 'relative',
               width: size === 'small' ? { xs: 50, sm: 60 } : { xs: 80, sm: 100 },
               height: size === 'small' ? { xs: 50, sm: 60 } : { xs: 80, sm: 100 },
               borderRadius: 1.5,
-              objectFit: 'cover',
               border: '2px solid',
               borderColor: 'divider',
-              cursor: isAdmin ? 'pointer' : 'default',
-              transition: 'transform 0.2s',
-              '&:hover': isAdmin ? {
-                transform: 'scale(1.05)',
-                boxShadow: 3,
-              } : {},
+              backgroundColor: '#f0f0f0',
+              overflow: 'hidden',
             }}
-          />
+          >
+            {!isLoaded && !hasError && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <CircularProgress size={20} />
+              </Box>
+            )}
+            {hasError ? (
+              <Box
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.75rem',
+                  color: 'text.secondary',
+                }}
+              >
+                Failed
+              </Box>
+            ) : (
+              <Box
+                component="img"
+                src={imageUrl}
+                alt={`Preview ${index + 1}`}
+                onClick={() => handleClick(imageUrl)}
+                onLoad={() => handleImageLoad(index)}
+                onError={() => handleImageError(index)}
+                loading="lazy"
+                decoding="async"
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  cursor: isAdmin ? 'pointer' : 'default',
+                  transition: 'transform 0.2s, opacity 0.3s',
+                  opacity: isLoaded ? 1 : 0,
+                  '&:hover': isAdmin ? {
+                    transform: 'scale(1.05)',
+                    boxShadow: 3,
+                  } : {},
+                }}
+              />
+            )}
+          </Box>
         );
       })}
     </Box>

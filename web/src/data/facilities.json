@@ -1719,6 +1719,15 @@
       "facility_code": "JHMEDESB001_GW1"
     },
     {
+      "sno": 668,
+      "district": "East Singhbum",
+      "facility_name": "PHC Shyamsundarpur",
+      "facility_type": "PHC",
+      "Lat ": 22.95114,
+      "longitude": 86.33395,
+      "facility_code": "JHMEDESB001_GW1"
+    },
+    {
       "sno": 191,
       "district": "East Singhbum",
       "facility_name": "Purbi Singhbhum Sadar Hospital-DH",

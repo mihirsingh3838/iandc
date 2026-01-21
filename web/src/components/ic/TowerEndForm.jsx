@@ -9,6 +9,7 @@ import {
   ToggleButtonGroup,
   Grid,
   IconButton,
+  FormHelperText,
 } from '@mui/material';
 import { CameraAlt, Delete } from '@mui/icons-material';
 import CameraComponent from '../CameraComponent';
@@ -20,11 +21,15 @@ const TowerEndForm = ({ data, onUpdate, showError }) => {
   const [showCamera, setShowCamera] = useState(false);
   const [cameraType, setCameraType] = useState(null);
   const [cameraMaxImages, setCameraMaxImages] = useState(0);
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
     setRouterImages(data?.router?.images?.routerImages || []);
     setConnectivityImages(data?.router?.images?.cableConnectivityImages || []);
     setRadioImages(data?.radio?.images || []);
+    
+    // Tower End is optional - no validation needed
+    setValidationErrors({});
   }, [data]);
 
   const openCamera = (type, maxImages) => {
@@ -213,7 +218,7 @@ const TowerEndForm = ({ data, onUpdate, showError }) => {
         />
 
         <Typography variant="body2" sx={{ mt: 3, mb: 1.5, fontWeight: 500 }}>
-          Router Images (2 required)
+          Router Images (Optional)
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
           {routerImages.map((uri, index) => (
@@ -283,7 +288,7 @@ const TowerEndForm = ({ data, onUpdate, showError }) => {
         </Box>
 
         <Typography variant="body2" sx={{ mt: 2, mb: 1 }}>
-          Cable Connectivity Images (2 required)
+          Cable Connectivity Images (Optional)
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
           {connectivityImages.map((uri, index) => (
@@ -434,7 +439,7 @@ const TowerEndForm = ({ data, onUpdate, showError }) => {
         />
 
         <Typography variant="body2" sx={{ mt: 3, mb: 1.5, fontWeight: 500 }}>
-          Radio Images (2-4 required)
+          Radio Images (Optional)
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
           {radioImages.map((uri, index) => (

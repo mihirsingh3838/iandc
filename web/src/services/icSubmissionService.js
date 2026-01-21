@@ -29,11 +29,24 @@ const icSubmissionService = {
     }
   },
 
-  submit: async (facilityId, customerEnd, towerEnd, token) => {
+  submit: async (facilityId, customerEnd, towerEnd, token, facilityDetails = null) => {
     try {
+      // Get facilityDetails from localStorage if not provided
+      let facilityData = facilityDetails;
+      if (!facilityData) {
+        try {
+          const stored = localStorage.getItem('facilityDetails');
+          if (stored) {
+            facilityData = JSON.parse(stored);
+          }
+        } catch (error) {
+          console.error('Error reading facilityDetails from localStorage:', error);
+        }
+      }
+
       const response = await apiClient.post(
         '/api/ic-submission/submit',
-        { facilityId, customerEnd, towerEnd }
+        { facilityId, customerEnd, towerEnd, facilityDetails: facilityData }
       );
       return response.data;
     } catch (error) {

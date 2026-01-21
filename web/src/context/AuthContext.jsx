@@ -82,6 +82,38 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshToken = async () => {
+    try {
+      if (!user?.token) {
+        throw new Error('No token available to refresh');
+      }
+
+      const response = await apiClient.post('/api/auth/refresh');
+      
+      if (response.status === 200 && response.data.token) {
+        const updatedUser = {
+          ...user,
+          ...response.data.user,
+          token: response.data.token,
+          loginId: user.loginId // Preserve loginId
+        };
+        
+        setUser(updatedUser);
+        localStorage.setItem('userData', JSON.stringify(updatedUser));
+        return response.data.token;
+      }
+      
+      throw new Error('Failed to refresh token');
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      // If refresh fails, logout user
+      if (error.response?.status === 401) {
+        await logout();
+      }
+      throw error;
+    }
+  };
+
   const login = async (username, password, name, deviceInfo, locationInfo) => {
     try {
       setError(null);
@@ -180,7 +212,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     getActiveSessions,
     updateFacilityDetails,
-    validateToken
+    validateToken,
+    refreshToken
   };
 
   return (

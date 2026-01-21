@@ -9,6 +9,7 @@ router.post('/login', authController.login);
 router.get('/validate', auth, authController.validateToken);
 
 // Protected routes (auth required)
+router.post('/refresh', auth, authController.refreshToken);
 router.post('/logout', auth, authController.logout);
 router.get('/sessions', auth, authController.getActiveSessions);
 router.post('/facility', auth, authController.updateFacility);

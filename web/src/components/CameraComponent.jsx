@@ -7,8 +7,10 @@ import {
   IconButton,
   CircularProgress,
   Typography,
+  LinearProgress,
 } from '@mui/material';
 import { CameraAlt, Close, FlipCameraIos } from '@mui/icons-material';
+import { compressImage } from '../utils/imageCompression';
 
 const CameraComponent = ({ open, onClose, onCapture, maxImages, currentImages }) => {
   const videoRef = useRef(null);
@@ -18,6 +20,8 @@ const CameraComponent = ({ open, onClose, onCapture, maxImages, currentImages })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [videoReady, setVideoReady] = useState(false);
+  const [compressing, setCompressing] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -92,7 +96,7 @@ const CameraComponent = ({ open, onClose, onCapture, maxImages, currentImages })
     setLoading(false);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     try {
       if (!videoRef.current || !canvasRef.current) {
         console.error('Video or canvas ref not available');
@@ -129,53 +133,84 @@ const CameraComponent = ({ open, onClose, onCapture, maxImages, currentImages })
       // Draw video frame to canvas
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Convert to base64 directly (more reliable than blob conversion)
+      // Convert to base64 first
+      let base64;
       try {
-        const base64 = canvas.toDataURL('image/jpeg', 0.9);
-        if (base64 && onCapture) {
-          console.log('Image captured successfully, size:', base64.length);
-          // Clear any previous errors
-          setError(null);
-          // Call the capture callback
-          onCapture(base64);
-        } else {
-          console.error('Failed to get data URL or onCapture not provided');
-          setError('Error processing image. Please try again.');
+        base64 = canvas.toDataURL('image/jpeg', 0.9);
+        if (!base64) {
+          throw new Error('Failed to get data URL');
         }
       } catch (err) {
         console.error('Error converting canvas to data URL:', err);
         // Fallback: try blob method
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              console.error('Failed to create blob from canvas');
-              setError('Failed to capture image. Please try again.');
-              return;
-            }
-
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              const base64 = reader.result;
-              if (base64 && onCapture) {
-                onCapture(base64);
-              } else {
-                console.error('Failed to read blob or onCapture not provided');
-                setError('Error processing image. Please try again.');
+        base64 = await new Promise((resolve, reject) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Failed to create blob from canvas'));
+                return;
               }
-            };
-            reader.onerror = () => {
-              console.error('FileReader error');
-              setError('Error reading image. Please try again.');
-            };
-            reader.readAsDataURL(blob);
-          },
-          'image/jpeg',
-          0.9
-        );
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.onerror = () => reject(new Error('FileReader error'));
+              reader.readAsDataURL(blob);
+            },
+            'image/jpeg',
+            0.9
+          );
+        });
+      }
+
+      if (!base64) {
+        setError('Failed to capture image. Please try again.');
+        return;
+      }
+
+      // Compress the image
+      setCompressing(true);
+      setCompressionProgress(0);
+      setError(null);
+
+      try {
+        // Simulate progress (compression is async)
+        const progressInterval = setInterval(() => {
+          setCompressionProgress((prev) => Math.min(prev + 10, 90));
+        }, 100);
+
+        const compressedBase64 = await compressImage(base64, 1920, 1080, 0.8, 500);
+        
+        clearInterval(progressInterval);
+        setCompressionProgress(100);
+
+        // Small delay to show 100% progress
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+        if (compressedBase64 && onCapture) {
+          console.log('Image captured and compressed successfully');
+          onCapture(compressedBase64);
+          setShowCamera(false);
+        } else {
+          setError('Error processing compressed image. Please try again.');
+        }
+      } catch (compressionError) {
+        console.error('Error compressing image:', compressionError);
+        // If compression fails, use original image
+        if (onCapture) {
+          console.warn('Using uncompressed image due to compression error');
+          onCapture(base64);
+          setShowCamera(false);
+        } else {
+          setError('Error compressing image. Please try again.');
+        }
+      } finally {
+        setCompressing(false);
+        setCompressionProgress(0);
       }
     } catch (err) {
       console.error('Error capturing photo:', err);
-      setError('Error capturing photo. Please try again.');
+      setError(`Error capturing photo: ${err.message || 'Please try again.'}`);
+      setCompressing(false);
+      setCompressionProgress(0);
     }
   };
 
@@ -240,6 +275,40 @@ const CameraComponent = ({ open, onClose, onCapture, maxImages, currentImages })
             <Button variant="contained" onClick={handleClose}>
               Close
             </Button>
+          </Box>
+        ) : compressing ? (
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '400px',
+              color: 'white',
+              p: 3,
+            }}
+          >
+            <CircularProgress sx={{ color: 'white', mb: 2 }} />
+            <Typography variant="body1" sx={{ mb: 1, textAlign: 'center' }}>
+              Compressing image...
+            </Typography>
+            <Box sx={{ width: '80%', maxWidth: 300, mt: 2 }}>
+              <LinearProgress 
+                variant="determinate" 
+                value={compressionProgress} 
+                sx={{ 
+                  height: 8, 
+                  borderRadius: 4,
+                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: 'white',
+                  },
+                }} 
+              />
+              <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', display: 'block' }}>
+                {compressionProgress}%
+              </Typography>
+            </Box>
           </Box>
         ) : (
           <>
@@ -365,15 +434,15 @@ const CameraComponent = ({ open, onClose, onCapture, maxImages, currentImages })
               <Button
                 variant="contained"
                 onClick={capturePhoto}
-                disabled={!videoReady || (currentImages && currentImages.length >= maxImages)}
+                disabled={!videoReady || compressing || (currentImages && currentImages.length >= maxImages)}
                 sx={{
                   width: 64,
                   height: 64,
                   borderRadius: '50%',
                   minWidth: 64,
-                  backgroundColor: videoReady ? 'white' : '#666',
+                  backgroundColor: (videoReady && !compressing) ? 'white' : '#666',
                   '&:hover': {
-                    backgroundColor: videoReady ? '#f0f0f0' : '#666',
+                    backgroundColor: (videoReady && !compressing) ? '#f0f0f0' : '#666',
                   },
                   '&:disabled': {
                     backgroundColor: '#666',
@@ -381,7 +450,7 @@ const CameraComponent = ({ open, onClose, onCapture, maxImages, currentImages })
                   },
                 }}
               >
-                <CameraAlt sx={{ color: videoReady ? '#000' : '#999', fontSize: 32 }} />
+                <CameraAlt sx={{ color: (videoReady && !compressing) ? '#000' : '#999', fontSize: 32 }} />
               </Button>
 
               <Box sx={{ width: 40 }} />

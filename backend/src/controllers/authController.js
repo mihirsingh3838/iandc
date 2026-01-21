@@ -182,11 +182,56 @@ const validateToken = async (req, res) => {
   }
 };
 
+const refreshToken = async (req, res) => {
+  try {
+    // Get the current user from the token (already validated by auth middleware)
+    const user = await User.findById(req.user.userId || req.user._id);
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    // Get the login history ID from the token
+    const loginHistoryId = req.user.loginHistoryId;
+    
+    // Verify login history exists and is active
+    const loginHistory = await LoginHistory.findById(loginHistoryId);
+    if (!loginHistory || loginHistory.status !== 'active') {
+      return res.status(401).json({ message: 'Session expired or invalid' });
+    }
+
+    // Generate new JWT token
+    const token = jwt.sign(
+      { 
+        userId: user._id,
+        username: user.username,
+        name: req.user.name,
+        loginHistoryId: loginHistoryId 
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: req.user.name,
+        username: user.username,
+        role: user.role || 'user'
+      }
+    });
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({ message: 'Error refreshing token' });
+  }
+};
+
 module.exports = {
   register,
   login,
   logout,
   getActiveSessions,
   updateFacility,
-  validateToken
+  validateToken,
+  refreshToken
 }; 

@@ -118,9 +118,19 @@ const icSubmissionSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  submittedByName: {
+    type: String,
+    required: false  // Name from login session
+  },
   facilityId: {
     type: String,
     required: true
+  },
+  facilityDetails: {
+    district: String,
+    facility_type: String,
+    facility_name: String,
+    facility_code: String
   },
   status: {
     type: String,

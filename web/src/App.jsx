@@ -117,68 +117,68 @@ const UserRoute = ({ children }) => {
 function App() {
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        <Route path="/" element={<SplashScreen />} />
-        <Route path="/login" element={<LoginScreen />} />
-        <Route
-          path="/facility-selection"
-          element={
-            <UserRoute>
-              <FacilitySelectionScreen />
-            </UserRoute>
-          }
-        />
-        <Route
-          path="/facility-summary"
-          element={
-            <UserRoute>
-              <FacilitySummaryScreen />
-            </UserRoute>
-          }
-        />
-        <Route
-          path="/home"
-          element={
-            <UserRoute>
-              <HomeScreen />
-            </UserRoute>
-          }
-        />
-        <Route
-          path="/ic-submission"
-          element={
-            <UserRoute>
-              <ICSubmissionScreen />
-            </UserRoute>
-          }
-        />
-        <Route
-          path="/ic-preview"
-          element={
-            <PrivateRoute>
-              <ICPreviewScreen />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/my-records"
-          element={
-            <UserRoute>
-              <UserRecordsScreen />
-            </UserRoute>
-          }
-        />
-        {/* Catch-all route for 404 - must be last */}
-        <Route path="*" element={<NotFoundScreen />} />
-      </Routes>
+    <Routes>
+      <Route path="/" element={<SplashScreen />} />
+      <Route path="/login" element={<LoginScreen />} />
+      <Route
+        path="/facility-selection"
+        element={
+          <UserRoute>
+            <FacilitySelectionScreen />
+          </UserRoute>
+        }
+      />
+      <Route
+        path="/facility-summary"
+        element={
+          <UserRoute>
+            <FacilitySummaryScreen />
+          </UserRoute>
+        }
+      />
+      <Route
+        path="/home"
+        element={
+          <UserRoute>
+            <HomeScreen />
+          </UserRoute>
+        }
+      />
+      <Route
+        path="/ic-submission"
+        element={
+          <UserRoute>
+            <ICSubmissionScreen />
+          </UserRoute>
+        }
+      />
+      <Route
+        path="/ic-preview"
+        element={
+          <PrivateRoute>
+            <ICPreviewScreen />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/my-records"
+        element={
+          <UserRoute>
+            <UserRecordsScreen />
+          </UserRoute>
+        }
+      />
+      {/* Catch-all route for 404 - must be last */}
+      <Route path="*" element={<NotFoundScreen />} />
+    </Routes>
     </Suspense>
   );
 }

@@ -103,15 +103,15 @@ const ImagePreview = ({ images, size = 'small', onImageClick, isAdmin = false })
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  cursor: isAdmin ? 'pointer' : 'default',
+              cursor: isAdmin ? 'pointer' : 'default',
                   transition: 'transform 0.2s, opacity 0.3s',
                   opacity: isLoaded ? 1 : 0,
-                  '&:hover': isAdmin ? {
-                    transform: 'scale(1.05)',
-                    boxShadow: 3,
-                  } : {},
-                }}
-              />
+              '&:hover': isAdmin ? {
+                transform: 'scale(1.05)',
+                boxShadow: 3,
+              } : {},
+            }}
+          />
             )}
           </Box>
         );
@@ -203,11 +203,17 @@ const ICPreviewScreen = () => {
       // Clear localStorage after successful submission
       const storageKey = `ic_submission_${submissionData.facilityId || facilityId}`;
       localStorage.removeItem(storageKey);
-      toast.success('Submission successful');
+      toast.success('Submission successful! Your form has been submitted and is pending review.');
       navigate('/home');
     } catch (error) {
       console.error('Submit error:', error);
-      toast.error(error.response?.data?.message || 'Error submitting form');
+      const errorMsg = error.response?.data?.message || error.message || 'Error submitting form';
+      const errorDetails = error.response?.data?.error || 
+                          (error.response?.status === 401 ? 'Session expired. Please login again.' : 
+                           error.response?.status === 403 ? 'You do not have permission to submit.' :
+                           error.response?.status === 500 ? 'Server error. Please try again later.' :
+                           error.response?.statusText);
+      toast.error(errorDetails ? `${errorMsg}: ${errorDetails}` : errorMsg);
     } finally {
       setSubmitting(false);
     }

@@ -51,13 +51,48 @@ const AdminDashboard = () => {
   const facilityMap = React.useMemo(() => {
     const map = {};
     facilitiesData.forEach(facility => {
-      map[facility.facility_code] = facility.facility_name;
+      map[facility.facility_code] = {
+        name: facility.facility_name,
+        district: facility.district,
+        facility_type: facility.facility_type
+      };
     });
     return map;
   }, []);
   
   const getFacilityName = (facilityId) => {
-    return facilityMap[facilityId] || facilityId;
+    return facilityMap[facilityId]?.name || facilityId;
+  };
+
+  const getFacilityDistrict = (facilityId) => {
+    return facilityMap[facilityId]?.district || 'N/A';
+  };
+
+  const getFacilityDetails = (submission) => {
+    // Try to get from facilityDetails in submission, or from facilityId
+    if (submission.facilityDetails) {
+      return {
+        district: submission.facilityDetails.district || 'N/A',
+        site: submission.facilityDetails.facility_name || submission.facilityDetails.facility_code || 'N/A'
+      };
+    }
+    return {
+      district: getFacilityDistrict(submission.facilityId),
+      site: getFacilityName(submission.facilityId)
+    };
+  };
+
+  const getAttendanceFacilityDetails = (record) => {
+    if (record.facilityDetails) {
+      return {
+        district: record.facilityDetails.district || 'N/A',
+        site: record.facilityDetails.facility_name || record.facilityDetails.facility_code || 'N/A'
+      };
+    }
+    return {
+      district: 'N/A',
+      site: 'N/A'
+    };
   };
 
   useEffect(() => {
@@ -77,9 +112,9 @@ const AdminDashboard = () => {
         apiClient.get('/api/admin/submissions/by-facility'),
         apiClient.get('/api/admin/attendance'),
       ]).then(([submissionsRes, groupedRes, attendanceRes]) => {
-        setSubmissions(submissionsRes.data);
-        setGroupedSubmissions(groupedRes.data);
-        setAttendance(attendanceRes.data);
+      setSubmissions(submissionsRes.data);
+      setGroupedSubmissions(groupedRes.data);
+      setAttendance(attendanceRes.data);
       }).catch((error) => {
         console.error('Error loading secondary data:', error);
         // Don't show error toast for secondary data, just log it
@@ -134,7 +169,9 @@ const AdminDashboard = () => {
       <Table>
         <TableHead>
           <TableRow>
+            <TableCell>District</TableCell>
             <TableCell>Site Name</TableCell>
+            <TableCell>Vendor (Username)</TableCell>
             <TableCell>Submitted By</TableCell>
             <TableCell>Submitted At</TableCell>
             <TableCell>Status</TableCell>
@@ -143,89 +180,98 @@ const AdminDashboard = () => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {submissions.map((submission) => (
-            <TableRow key={submission._id}>
-              <TableCell>{getFacilityName(submission.facilityId)}</TableCell>
-              <TableCell>
-                {submission.userId?.name || submission.userId?.username || 'Unknown'}
-              </TableCell>
-              <TableCell>
-                {submission.submittedAt
-                  ? new Date(submission.submittedAt).toLocaleString()
-                  : 'N/A'}
-              </TableCell>
-              <TableCell>
-                <Chip
-                  label={submission.status}
-                  color={getStatusColor(submission.status)}
-                  size="small"
-                />
-              </TableCell>
-              <TableCell>
-                {submission.approvalStatus?.reviewStatus ? (
+          {submissions.map((submission) => {
+            const facilityDetails = getFacilityDetails(submission);
+            return (
+              <TableRow key={submission._id}>
+                <TableCell>{facilityDetails.district}</TableCell>
+                <TableCell>{facilityDetails.site}</TableCell>
+                <TableCell>
+                  <Typography variant="body2" fontWeight="medium">
+                    {submission.userId?.username || 'N/A'}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  {submission.submittedByName || submission.userId?.name || submission.userId?.username || 'Unknown'}
+                </TableCell>
+                <TableCell>
+                  {submission.submittedAt
+                    ? new Date(submission.submittedAt).toLocaleString()
+                    : 'N/A'}
+                </TableCell>
+                <TableCell>
                   <Chip
-                    label={submission.approvalStatus.reviewStatus}
-                    color={
-                      submission.approvalStatus.reviewStatus === 'approved'
-                        ? 'success'
-                        : submission.approvalStatus.reviewStatus === 'rejected'
-                        ? 'error'
-                        : 'warning'
-                    }
+                    label={submission.status}
+                    color={getStatusColor(submission.status)}
                     size="small"
                   />
-                ) : (
-                  <Chip label="pending" color="warning" size="small" />
-                )}
-              </TableCell>
-              <TableCell>
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                  {submission.customerEnd?.siteVideo && (
+                </TableCell>
+                <TableCell>
+                  {submission.approvalStatus?.reviewStatus ? (
                     <Chip
-                      label="Video"
-                      color="info"
+                      label={submission.approvalStatus.reviewStatus}
+                      color={
+                        submission.approvalStatus.reviewStatus === 'approved'
+                          ? 'success'
+                          : submission.approvalStatus.reviewStatus === 'rejected'
+                          ? 'error'
+                          : 'warning'
+                      }
                       size="small"
-                      sx={{ mr: 1 }}
                     />
+                  ) : (
+                    <Chip label="pending" color="warning" size="small" />
                   )}
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<Visibility />}
-                    onClick={() => navigate(`/ic-preview?id=${submission._id}`)}
-                  >
-                    View
-                  </Button>
-                  {submission.status === 'submitted' && (
-                    <>
-                      <Button
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    {submission.customerEnd?.siteVideo && (
+                      <Chip
+                        label="Video"
+                        color="info"
                         size="small"
-                        variant="contained"
-                        color="success"
-                        startIcon={<CheckCircle />}
-                        onClick={() =>
-                          setReviewDialog({ open: true, submission })
-                        }
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color="error"
-                        startIcon={<Cancel />}
-                        onClick={() =>
-                          setReviewDialog({ open: true, submission })
-                        }
-                      >
-                        Reject
-                      </Button>
-                    </>
-                  )}
-                </Box>
-              </TableCell>
-            </TableRow>
-          ))}
+                        sx={{ mr: 1 }}
+                      />
+                    )}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Visibility />}
+                      onClick={() => navigate(`/ic-preview?id=${submission._id}`)}
+                    >
+                      View
+                    </Button>
+                    {submission.status === 'submitted' && (
+                      <>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          startIcon={<CheckCircle />}
+                          onClick={() =>
+                            setReviewDialog({ open: true, submission })
+                          }
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="error"
+                          startIcon={<Cancel />}
+                          onClick={() =>
+                            setReviewDialog({ open: true, submission })
+                          }
+                        >
+                          Reject
+                        </Button>
+                      </>
+                    )}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>
@@ -233,27 +279,40 @@ const AdminDashboard = () => {
 
   const renderByFacility = () => (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-      {Object.entries(groupedSubmissions).map(([facilityId, facilitySubmissions]) => (
-        <Paper key={facilityId} sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Site: {getFacilityName(facilityId)} ({facilitySubmissions.length} submissions)
-          </Typography>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Submitted By</TableCell>
-                  <TableCell>Submitted At</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Review Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {facilitySubmissions.map((submission) => (
-                  <TableRow key={submission._id}>
+      {Object.entries(groupedSubmissions).map(([facilityId, facilitySubmissions]) => {
+        const facilityDetails = facilitySubmissions[0] ? getFacilityDetails(facilitySubmissions[0]) : { district: getFacilityDistrict(facilityId), site: getFacilityName(facilityId) };
+        return (
+          <Paper key={facilityId} sx={{ p: 2 }}>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Site: {facilityDetails.site} ({facilitySubmissions.length} submissions)
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                District: {facilityDetails.district}
+              </Typography>
+            </Box>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Vendor (Username)</TableCell>
+                    <TableCell>Submitted By</TableCell>
+                    <TableCell>Submitted At</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Review Status</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {facilitySubmissions.map((submission) => (
+                    <TableRow key={submission._id}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight="medium">
+                          {submission.userId?.username || 'N/A'}
+                        </Typography>
+                      </TableCell>
                     <TableCell>
-                      {submission.userId?.name || submission.userId?.username || 'Unknown'}
+                      {submission.submittedByName || submission.userId?.name || submission.userId?.username || 'Unknown'}
                     </TableCell>
                     <TableCell>
                       {submission.submittedAt
@@ -267,76 +326,77 @@ const AdminDashboard = () => {
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>
-                      {submission.approvalStatus?.reviewStatus ? (
-                        <Chip
-                          label={submission.approvalStatus.reviewStatus}
-                          color={
-                            submission.approvalStatus.reviewStatus === 'approved'
-                              ? 'success'
-                              : submission.approvalStatus.reviewStatus === 'rejected'
-                              ? 'error'
-                              : 'warning'
-                          }
-                          size="small"
-                        />
-                      ) : (
-                        <Chip label="pending" color="warning" size="small" />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                        {submission.customerEnd?.siteVideo && (
+                      <TableCell>
+                        {submission.approvalStatus?.reviewStatus ? (
                           <Chip
-                            label="Video"
-                            color="info"
+                            label={submission.approvalStatus.reviewStatus}
+                            color={
+                              submission.approvalStatus.reviewStatus === 'approved'
+                                ? 'success'
+                                : submission.approvalStatus.reviewStatus === 'rejected'
+                                ? 'error'
+                                : 'warning'
+                            }
                             size="small"
-                            sx={{ mr: 1 }}
                           />
+                        ) : (
+                          <Chip label="pending" color="warning" size="small" />
                         )}
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<Visibility />}
-                          onClick={() => navigate(`/ic-preview?id=${submission._id}`)}
-                        >
-                          View
-                        </Button>
-                        {submission.status === 'submitted' && (
-                          <>
-                            <Button
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          {submission.customerEnd?.siteVideo && (
+                            <Chip
+                              label="Video"
+                              color="info"
                               size="small"
-                              variant="contained"
-                              color="success"
-                              startIcon={<CheckCircle />}
-                              onClick={() =>
-                                setReviewDialog({ open: true, submission })
-                              }
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="error"
-                              startIcon={<Cancel />}
-                              onClick={() =>
-                                setReviewDialog({ open: true, submission })
-                              }
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      ))}
+                              sx={{ mr: 1 }}
+                            />
+                          )}
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<Visibility />}
+                            onClick={() => navigate(`/ic-preview?id=${submission._id}`)}
+                          >
+                            View
+                          </Button>
+                          {submission.status === 'submitted' && (
+                            <>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="success"
+                                startIcon={<CheckCircle />}
+                                onClick={() =>
+                                  setReviewDialog({ open: true, submission })
+                                }
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="error"
+                                startIcon={<Cancel />}
+                                onClick={() =>
+                                  setReviewDialog({ open: true, submission })
+                                }
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        );
+      })}
     </Box>
   );
 
@@ -444,10 +504,12 @@ const AdminDashboard = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
+                      <TableCell>District</TableCell>
+                      <TableCell>Site</TableCell>
+                      <TableCell>Vendor (Username)</TableCell>
                       <TableCell>User</TableCell>
                       <TableCell>Type</TableCell>
                       <TableCell>Location</TableCell>
-                      <TableCell>Site</TableCell>
                       <TableCell>Timestamp</TableCell>
                       <TableCell>Selfie</TableCell>
                     </TableRow>
@@ -455,41 +517,48 @@ const AdminDashboard = () => {
                   <TableBody>
                     {attendance.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center">
+                        <TableCell colSpan={8} align="center">
                           <Typography color="text.secondary">No attendance records found</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      attendance.map((record) => (
-                        <TableRow key={record._id}>
-                          <TableCell>
-                            {record.userId?.name || record.name || record.username || 'Unknown'}
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={record.attendanceType}
-                              color={record.attendanceType === 'Check In' ? 'success' : 'info'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>{record.location?.name || 'N/A'}</TableCell>
-                          <TableCell>
-                            {record.facilityDetails?.facility_name || record.facilityDetails?.facility_code || 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            {record.timestamp
-                              ? new Date(record.timestamp).toLocaleString()
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>
-                            <Avatar
-                              src={record.selfieUrl}
-                              sx={{ width: 56, height: 56, cursor: 'pointer' }}
-                              onClick={() => window.open(record.selfieUrl, '_blank')}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      attendance.map((record) => {
+                        const facilityDetails = getAttendanceFacilityDetails(record);
+                        return (
+                          <TableRow key={record._id}>
+                            <TableCell>{facilityDetails.district}</TableCell>
+                            <TableCell>{facilityDetails.site}</TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight="medium">
+                                {record.userId?.username || record.username || 'N/A'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              {record.userId?.name || record.name || record.username || 'Unknown'}
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={record.attendanceType}
+                                color={record.attendanceType === 'Check In' ? 'success' : 'info'}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>{record.location?.name || 'N/A'}</TableCell>
+                            <TableCell>
+                              {record.timestamp
+                                ? new Date(record.timestamp).toLocaleString()
+                                : 'N/A'}
+                            </TableCell>
+                            <TableCell>
+                              <Avatar
+                                src={record.selfieUrl}
+                                sx={{ width: 56, height: 56, cursor: 'pointer' }}
+                                onClick={() => window.open(record.selfieUrl, '_blank')}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>

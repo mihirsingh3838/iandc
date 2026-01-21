@@ -16,13 +16,16 @@ import {
   AppBar,
   Toolbar,
   IconButton,
+  LinearProgress,
+  Alert,
 } from '@mui/material';
-import { ArrowBack, Home } from '@mui/icons-material';
+import { ArrowBack, Home, DeleteOutline } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import TowerEndForm from '../components/ic/TowerEndForm';
 import CustomerEndForm from '../components/ic/CustomerEndForm';
 import icSubmissionService from '../services/icSubmissionService';
 import { useAuth } from '../context/AuthContext';
+import { validateFormData } from '../utils/formValidation';
 
 const ICSubmissionScreen = () => {
   const navigate = useNavigate();
@@ -54,6 +57,9 @@ const ICSubmissionScreen = () => {
   });
   const [loading, setLoading] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState(0);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [showClearDialog, setShowClearDialog] = useState(false);
 
   // LocalStorage key for form data
   const getStorageKey = (id) => `ic_submission_${id}`;
@@ -130,23 +136,38 @@ const ICSubmissionScreen = () => {
     }));
   };
 
-  const showError = (message) => {
-    toast.error(message);
+  const showError = (message, details = null) => {
+    const fullMessage = details ? `${message}: ${details}` : message;
+    toast.error(fullMessage);
+    setErrorMessage(fullMessage);
+    // Clear error after 5 seconds
+    setTimeout(() => setErrorMessage(null), 5000);
   };
 
   const handleSaveDraft = async () => {
     try {
       setLoading(true);
+      setErrorMessage(null);
+      setSubmitProgress(30);
+      
       await icSubmissionService.saveDraft(
         facilityId,
         formData.customer,
         formData.tower,
         user?.token
       );
+      
+      setSubmitProgress(100);
       setShowSaveModal(true);
       toast.success('Draft saved successfully');
+      
+      // Reset progress after a short delay
+      setTimeout(() => setSubmitProgress(0), 500);
     } catch (error) {
-      showError(error.response?.data?.message || 'Error saving draft');
+      const errorMsg = error.response?.data?.message || error.message || 'Error saving draft';
+      const errorDetails = error.response?.data?.error || error.response?.statusText;
+      showError(errorMsg, errorDetails);
+      setSubmitProgress(0);
     } finally {
       setLoading(false);
     }
@@ -165,22 +186,85 @@ const ICSubmissionScreen = () => {
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      setErrorMessage(null);
+      setSubmitProgress(10);
+      
+      // Validate form data before submission
+      const validationErrors = validateForm();
+      if (validationErrors.length > 0) {
+        showError('Please fix the following errors before submitting:', validationErrors.join('; '));
+        setSubmitProgress(0);
+        setLoading(false);
+        return;
+      }
+      
+      setSubmitProgress(30);
       await icSubmissionService.submit(
         facilityId,
         formData.customer,
         formData.tower,
         user?.token
       );
+      
+      setSubmitProgress(80);
       // Clear localStorage after successful submission
       const storageKey = getStorageKey(facilityId);
       localStorage.removeItem(storageKey);
-      toast.success('Submission successful');
-      navigate('/home');
+      
+      setSubmitProgress(100);
+      toast.success('Submission successful! Your form has been submitted.');
+      
+      // Small delay to show completion
+      setTimeout(() => {
+        navigate('/home');
+      }, 500);
     } catch (error) {
-      showError(error.response?.data?.message || 'Error submitting form');
+      const errorMsg = error.response?.data?.message || error.message || 'Error submitting form';
+      const errorDetails = error.response?.data?.error || 
+                          (error.response?.status === 401 ? 'Session expired. Please login again.' : 
+                           error.response?.status === 403 ? 'You do not have permission to submit.' :
+                           error.response?.status === 500 ? 'Server error. Please try again later.' :
+                           error.response?.statusText);
+      showError(errorMsg, errorDetails);
+      setSubmitProgress(0);
       throw error;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const validateForm = () => {
+    const validation = validateFormData(formData);
+    return validation.errors;
+  };
+
+  const handleClearForm = async () => {
+    try {
+      // Clear form data
+      setFormData({
+        tower: {},
+        customer: {}
+      });
+
+      // Clear localStorage
+      const storageKey = getStorageKey(facilityId);
+      localStorage.removeItem(storageKey);
+
+      // Clear server draft if exists
+      try {
+        await icSubmissionService.getDraft(facilityId, user?.token);
+        // If draft exists, we should delete it (assuming there's a delete endpoint)
+        // For now, we'll just clear local storage
+      } catch (error) {
+        // Draft doesn't exist or error fetching, that's okay
+      }
+
+      setShowClearDialog(false);
+      toast.success('Form cleared successfully');
+      setErrorMessage(null);
+    } catch (error) {
+      console.error('Error clearing form:', error);
+      toast.error('Error clearing form. Please try again.');
     }
   };
 
@@ -286,6 +370,34 @@ const ICSubmissionScreen = () => {
       </Paper>
 
       <Container maxWidth="lg" sx={{ mt: { xs: 2, sm: 3 }, pb: 4, px: { xs: 2, sm: 3 } }}>
+        {errorMessage && (
+          <Alert 
+            severity="error" 
+            onClose={() => setErrorMessage(null)}
+            sx={{ mb: 2 }}
+          >
+            {errorMessage}
+          </Alert>
+        )}
+        
+        {loading && submitProgress > 0 && (
+          <Box sx={{ mb: 2 }}>
+            <LinearProgress 
+              variant="determinate" 
+              value={submitProgress} 
+              sx={{ 
+                height: 8, 
+                borderRadius: 4,
+              }} 
+            />
+            <Typography variant="caption" sx={{ mt: 0.5, display: 'block', textAlign: 'center' }}>
+              {submitProgress < 30 ? 'Preparing submission...' :
+               submitProgress < 80 ? 'Submitting data...' :
+               'Finalizing...'} ({submitProgress}%)
+            </Typography>
+          </Box>
+        )}
+        
         {activeTab === 0 ? (
           <TowerEndForm
             data={formData.tower}
@@ -311,48 +423,90 @@ const ICSubmissionScreen = () => {
           }}
         >
           {activeTab === 0 && (
-            <Button
-              variant="contained"
-              onClick={handleSaveDraft}
-              disabled={loading}
-              fullWidth
-              sx={{
-                py: 1.5,
-                fontSize: '1rem',
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                },
-                '&:disabled': {
-                  background: '#e0e0e0',
-                },
-              }}
-            >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Save Draft'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+              <Button
+                variant="outlined"
+                onClick={() => setShowClearDialog(true)}
+                disabled={loading}
+                startIcon={<DeleteOutline />}
+                sx={{
+                  flex: { xs: 1, sm: '0 0 auto' },
+                  py: 1.5,
+                  fontSize: '1rem',
+                  color: 'error.main',
+                  borderColor: 'error.main',
+                  '&:hover': {
+                    borderColor: 'error.dark',
+                    backgroundColor: 'error.light',
+                  },
+                }}
+              >
+                Clear Form
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleSaveDraft}
+                disabled={loading}
+                fullWidth
+                sx={{
+                  py: 1.5,
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  },
+                  '&:disabled': {
+                    background: '#e0e0e0',
+                  },
+                }}
+              >
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Save Draft'}
+              </Button>
+            </Box>
           )}
           {activeTab === 1 && (
-            <Button
-              variant="contained"
-              onClick={handlePreview}
-              disabled={loading}
-              fullWidth
-              sx={{
-                py: 1.5,
-                fontSize: '1rem',
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
-                },
-                '&:disabled': {
-                  background: '#e0e0e0',
-                },
-              }}
-            >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Preview & Submit'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
+              <Button
+                variant="outlined"
+                onClick={() => setShowClearDialog(true)}
+                disabled={loading}
+                startIcon={<DeleteOutline />}
+                sx={{
+                  flex: { xs: 1, sm: '0 0 auto' },
+                  py: 1.5,
+                  fontSize: '1rem',
+                  color: 'error.main',
+                  borderColor: 'error.main',
+                  '&:hover': {
+                    borderColor: 'error.dark',
+                    backgroundColor: 'error.light',
+                  },
+                }}
+              >
+                Clear Form
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handlePreview}
+                disabled={loading}
+                fullWidth
+                sx={{
+                  py: 1.5,
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)',
+                  },
+                  '&:disabled': {
+                    background: '#e0e0e0',
+                  },
+                }}
+              >
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Preview & Submit'}
+              </Button>
+            </Box>
           )}
         </Paper>
       </Container>
@@ -383,6 +537,49 @@ const ICSubmissionScreen = () => {
             }}
           >
             OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog 
+        open={showClearDialog} 
+        onClose={() => setShowClearDialog(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: { xs: '90%', sm: 400 },
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600, color: 'error.main' }}>
+          Clear Form?
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to clear all form data? This action cannot be undone.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            All entered data, images, and local drafts will be permanently deleted.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button 
+            onClick={() => setShowClearDialog(false)}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleClearForm}
+            variant="contained"
+            color="error"
+            sx={{
+              '&:hover': {
+                backgroundColor: 'error.dark',
+              },
+            }}
+          >
+            Clear Form
           </Button>
         </DialogActions>
       </Dialog>

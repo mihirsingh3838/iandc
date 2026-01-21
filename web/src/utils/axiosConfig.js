@@ -55,12 +55,14 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor with retry logic
+// Response interceptor with retry logic and token refresh
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
+    const originalRequest = error.config;
+
     // Retry on network errors or timeout
     if (
       !error.response &&
@@ -69,15 +71,55 @@ apiClient.interceptors.response.use(
       return retryRequest(error);
     }
 
-    // Handle 401 errors
-    if (error.response?.status === 401) {
-      // Clear user data and redirect to login
-      localStorage.removeItem('userData');
-      localStorage.removeItem('facilityDetails');
-      
-      // Only redirect if we're not already on login page
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+    // Handle 401 errors - try to refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const userData = localStorage.getItem('userData');
+        if (!userData) {
+          throw new Error('No user data found');
+        }
+
+        const user = JSON.parse(userData);
+        if (!user.token) {
+          throw new Error('No token found');
+        }
+
+        // Try to refresh the token
+        const refreshResponse = await axios.post(
+          `${apiClient.defaults.baseURL}/api/auth/refresh`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${user.token}`
+            }
+          }
+        );
+
+        if (refreshResponse.data.token) {
+          // Update stored token
+          const updatedUser = {
+            ...user,
+            token: refreshResponse.data.token,
+            ...refreshResponse.data.user
+          };
+          localStorage.setItem('userData', JSON.stringify(updatedUser));
+
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.token}`;
+          return apiClient(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        // If refresh fails, clear user data and redirect to login
+        localStorage.removeItem('userData');
+        localStorage.removeItem('facilityDetails');
+        
+        // Only redirect if we're not already on login page
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
     

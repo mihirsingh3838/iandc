@@ -203,7 +203,7 @@ const getDraft = async (req, res) => {
 const submit = async (req, res) => {
   try {
     const { userId } = req.user;
-    const { facilityId, customerEnd, towerEnd } = req.body;
+    const { facilityId, customerEnd, towerEnd, facilityDetails } = req.body;
 
     const processedData = {
       customerEnd: {
@@ -214,7 +214,8 @@ const submit = async (req, res) => {
         poeSwitches: await processArrayWithImages(customerEnd.poeSwitches),
         siteVideo: customerEnd.siteVideo ? await uploadVideoToCloudinary(customerEnd.siteVideo) : undefined
       },
-      towerEnd: await processTowerEndImages(towerEnd),
+      towerEnd: towerEnd ? await processTowerEndImages(towerEnd) : undefined,
+      facilityDetails: facilityDetails || null,
       status: 'submitted',
       submittedAt: new Date()
     };
@@ -229,6 +230,7 @@ const submit = async (req, res) => {
     // Create new submission
     const submission = await ICSubmission.create({
       userId,
+      submittedByName: req.user.name || null, // Store name from login session
       facilityId,
       ...processedData
     });

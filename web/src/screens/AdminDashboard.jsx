@@ -95,6 +95,19 @@ const AdminDashboard = () => {
     };
   };
 
+  // Deduplicate attendance records on frontend as additional safeguard
+  const deduplicateAttendance = (attendance) => {
+    const seen = new Map();
+    return attendance.filter(record => {
+      const key = `${record.userId?._id || record._id}-${record.attendanceType}-${record.timestamp}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.set(key, true);
+      return true;
+    });
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -114,7 +127,9 @@ const AdminDashboard = () => {
       ]).then(([submissionsRes, groupedRes, attendanceRes]) => {
       setSubmissions(submissionsRes.data);
       setGroupedSubmissions(groupedRes.data);
-      setAttendance(attendanceRes.data);
+      // Deduplicate attendance records
+      const uniqueAttendance = deduplicateAttendance(attendanceRes.data);
+      setAttendance(uniqueAttendance);
       }).catch((error) => {
         console.error('Error loading secondary data:', error);
         // Don't show error toast for secondary data, just log it

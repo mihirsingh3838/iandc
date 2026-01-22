@@ -199,7 +199,20 @@ const getAllAttendance = async (req, res) => {
       .sort({ timestamp: -1 })
       .limit(1000); // Limit to recent 1000 records
 
-    res.json(attendance);
+    // Remove duplicates based on userId, timestamp, and attendanceType
+    // If two records have the same userId, timestamp (within 5 seconds), and attendanceType, keep only one
+    const uniqueAttendance = [];
+    const seen = new Map();
+    
+    attendance.forEach(record => {
+      const key = `${record.userId?._id || record.userId}-${record.attendanceType}-${Math.floor(new Date(record.timestamp).getTime() / 5000)}`;
+      if (!seen.has(key)) {
+        seen.set(key, true);
+        uniqueAttendance.push(record);
+      }
+    });
+
+    res.json(uniqueAttendance);
   } catch (error) {
     console.error('Get all attendance error:', error);
     res.status(500).json({ message: 'Error fetching attendance', error: error.message });

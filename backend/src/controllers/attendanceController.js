@@ -9,6 +9,24 @@ exports.markAttendance = async (req, res) => {
       throw new Error('User name is required for marking attendance');
     }
 
+    // Check for duplicate attendance within the last 10 seconds
+    // This prevents double submissions from network retries or double clicks
+    const tenSecondsAgo = new Date(Date.now() - 10000);
+    const existingAttendance = await Attendance.findOne({
+      userId: req.user._id,
+      attendanceType,
+      timestamp: { $gte: tenSecondsAgo },
+      'location.coordinates': [location.longitude, location.latitude]
+    });
+
+    if (existingAttendance) {
+      console.log('Duplicate attendance detected, returning existing record');
+      return res.status(200).json({ 
+        message: 'Attendance already marked', 
+        attendance: existingAttendance 
+      });
+    }
+
     console.log('Attempting to upload image to Cloudinary...');
     console.log('Cloudinary config:', {
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? 'Set' : 'Not set',
